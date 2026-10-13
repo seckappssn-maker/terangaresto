@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Notre menu avec photos et prix. Commandez en livraison, à emporter ou sur place, et envoyez votre commande sur WhatsApp.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Notre menu – commandez en ligne">
+<meta property="og:description" content="Photos, prix, livraison ou à emporter : choisissez vos plats et envoyez la commande sur WhatsApp.">
+<meta property="og:image" content="https://seckappssn-maker.github.io/terangaresto/copertina-menu.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0D344C">
+<style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px)}body{margin:0}img{max-width:100%}</style>
+<title>Teranga Resto · Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: menu mobile — bandeau du restaurant, catégories collantes, cartes de plats avec photos, barre « Ma commande » fixe en bas, panneau de commande */
+:root{
+  --bg:#F4F7F9; --surface:#FFFFFF; --ink:#13222C; --muted:#4F6170; --line:#D5E0E7;
+  --blue:#155E83; --blue-deep:#0D344C; --blue-soft:#E2EFF6; --sky:#7FD0F5; --sky-ink:#0B4A69;
+  --ok:#1F7A45; --ok-soft:#DFF2E6; --bad:#A8231B; --bad-soft:#FBE3E1; --wa:#1F9D55; --on:#FFFFFF;
+  --f-d:"Bricolage Grotesque","Figtree",system-ui,sans-serif; --f-b:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --fs:17px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F171C; --surface:#172229; --ink:#EAF2F7; --muted:#A9BCC8; --line:#2A3A45;
+  --blue:#5DB3DE; --blue-deep:#0B2433; --blue-soft:#16303D; --sky:#7FD0F5; --sky-ink:#BFE8FB;
+  --ok:#6BCB8E; --ok-soft:#1C3325; --bad:#F2837A; --bad-soft:#3D1B19; --wa:#25B864; --on:#0F171C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F171C; --surface:#172229; --ink:#EAF2F7; --muted:#A9BCC8; --line:#2A3A45;
+  --blue:#5DB3DE; --blue-deep:#0B2433; --blue-soft:#16303D; --sky:#7FD0F5; --sky-ink:#BFE8FB;
+  --ok:#6BCB8E; --ok-soft:#1C3325; --bad:#F2837A; --bad-soft:#3D1B19; --wa:#25B864; --on:#0F171C; color-scheme:dark}
+:root.big{--fs:20px}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-b);font-size:var(--fs);line-height:1.45;font-variant-numeric:tabular-nums;padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-d);margin:0;text-wrap:balance}
+:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+.hero{background:var(--blue-deep);color:#fff;position:relative;overflow:hidden;padding-inline:16px;padding-block:20px 26px}
+.hero::before{content:"";position:absolute;width:340px;height:340px;border-radius:50%;background:#1E7299;right:-120px;top:-150px}
+.hero::after{content:"";position:absolute;width:150px;height:150px;border-radius:50%;background:#7FD0F5;right:22px;bottom:-95px}
+.hin{position:relative;max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.tools{display:flex;justify-content:flex-end;gap:8px}
+.tbtn{border:1.5px solid rgba(255,255,255,.55);background:transparent;color:#fff;border-radius:999px;padding:7px 14px;font-weight:800;font-size:15px;cursor:pointer;min-height:40px}
+.hero h1{font-size:calc(var(--fs)*2.2);line-height:1.05;letter-spacing:-.01em}
+.hero p{margin:0;max-width:60ch;color:#E6F3FA}
+.chipsI{display:flex;flex-wrap:wrap;gap:8px}
+.ci{background:rgba(255,255,255,.13);border-radius:999px;padding:6px 12px;font-size:calc(var(--fs)*.85);font-weight:700;color:#fff}
+.demo{background:var(--blue-soft);color:var(--sky-ink);border-bottom:1px solid var(--line);padding:10px 16px;text-align:center;font-weight:700;font-size:calc(var(--fs)*.85)}
+.cats{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.cats .in{max-width:860px;margin:0 auto;display:flex;gap:8px;overflow-x:auto;padding:10px 16px;scrollbar-width:none}
+.cat{flex:none;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:9px 16px;font-weight:800;cursor:pointer;min-height:44px}
+.cat.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+main{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:8px 24px}
+.sec{padding-top:18px;scroll-margin-top:72px}
+.sec h2{font-size:calc(var(--fs)*1.35);margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.card.out{opacity:.6}
+.pics{position:relative}
+.strip{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;aspect-ratio:4/3;background:var(--blue-soft)}
+.strip::-webkit-scrollbar{display:none}
+.strip img,.strip .noimg{flex:0 0 100%;width:100%;height:100%;object-fit:cover;scroll-snap-align:start;display:block}
+.noimg{display:grid;place-items:center;color:var(--blue)}
+.dots{position:absolute;left:0;right:0;bottom:8px;display:flex;justify-content:center;gap:6px}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.6);box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.dots i.on{background:#fff}
+.badge{position:absolute;top:10px;left:10px;border-radius:999px;padding:5px 12px;font-weight:800;font-size:calc(var(--fs)*.8)}
+.b-jour{background:var(--sky);color:#0B2433}
+.b-out{background:var(--bad);color:#fff}
+.cb{padding:14px;display:flex;flex-direction:column;gap:6px;flex:1}
+.cb h3{font-size:calc(var(--fs)*1.15);line-height:1.2}
+.desc{color:var(--muted);font-size:calc(var(--fs)*.9)}
+.cf{margin-top:auto;padding-top:8px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.price{font-family:var(--f-d);font-weight:800;font-size:calc(var(--fs)*1.25)}
+.add{border:0;background:var(--blue);color:#fff;border-radius:12px;font-weight:800;padding:10px 18px;min-height:48px;cursor:pointer}
+.add:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{width:46px;height:46px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-size:24px;font-weight:800;cursor:pointer}
+.qty b{min-width:30px;text-align:center;font-size:calc(var(--fs)*1.2)}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:8;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,var(--bg) 30%)}
+.bar button{width:100%;max-width:860px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;border-radius:16px;background:var(--blue);color:#fff;padding:14px 18px;min-height:62px;font-weight:800;font-size:calc(var(--fs)*1.05);cursor:pointer}
+.bar .n{background:#fff;color:var(--blue-deep);border-radius:999px;padding:2px 10px;margin-right:8px}
+.ov{position:fixed;inset:0;z-index:20;background:rgba(8,18,24,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:94%;overflow:auto;border-radius:20px 20px 0 0;padding-inline:16px;padding-block:18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.sh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sh h2{font-size:calc(var(--fs)*1.4)}
+.x{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;min-height:44px;padding:8px 14px;font-weight:800;cursor:pointer}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.line{display:flex;align-items:center;gap:10px}
+.line .g{flex:1;min-width:0}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.mode{border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 10px;font-weight:800;cursor:pointer;min-height:56px}
+.mode.on{border-color:var(--blue);background:var(--blue-soft);color:var(--sky-ink)}
+label.f{display:flex;flex-direction:column;gap:5px;font-weight:700;font-size:calc(var(--fs)*.9)}
+input,select,textarea{border:1.5px solid var(--line);border-radius:12px;padding:12px;background:var(--surface);width:100%;font-size:max(16px,var(--fs))}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.tot{display:flex;justify-content:space-between;font-family:var(--f-d);font-weight:800;font-size:calc(var(--fs)*1.45)}
+.sub{display:flex;justify-content:space-between;color:var(--muted);font-weight:700}
+.send{display:flex;align-items:center;justify-content:center;gap:12px;text-decoration:none;background:var(--wa);color:#fff;border-radius:16px;min-height:64px;padding:14px;font-weight:800;font-size:calc(var(--fs)*1.15)}
+.err{color:var(--bad);font-weight:700}
+.muted{color:var(--muted)}
+.state{max-width:520px;margin:60px auto;padding-inline:16px;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center}
+.state h1{font-size:calc(var(--fs)*1.7)}
+.foot{text-align:center;color:var(--muted);font-size:calc(var(--fs)*.8);padding:24px 16px 0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:700;z-index:30;max-width:90%}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div id="app"><div class="state"><h1>Teranga Resto</h1><div class="muted">Chargement du menu…</div></div></div>
+<div id="ovWrap"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script>
+const SUPA_URL='https://ncsjgmkrsvtwklfrdbgy.supabase.co';
+const SUPA_KEY='sb_publishable_oDE4BbU6J3RTnce1Oo91cQ_hokWgh0U';
+const CATS=['Plats','Petit-déjeuner','Grillades','Boissons','Desserts'];
+const JOURS=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const F=n=>Math.round(+n||0).toLocaleString('fr-FR').replace(/ | /g,' ')+' F';
+const $=id=>document.getElementById(id);
+const val=id=>{const e=$(id);return e?e.value:''};
+function waNum(t){let n=String(t||'').replace(/\D/g,'');if(n.startsWith('00'))n=n.slice(2);if(n.length===9)n='221'+n;return n}
+function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||'null');localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+
+/* ---------- Langue ---------- */
+const WO={
+ 'Commander':'Komande','Ma commande':'Sama komand','article':'lef','articles':'lef yi','Ajouter':'Yokk','Épuisé':'Jeex na','Plat du jour':'Lekk bu tey',
+ 'Livraison':'Yóbbal','À emporter':'Yóbbu ko','Sur place':'Fii lañu lekk','Votre nom':'Sa tur','Votre téléphone':'Sa telefon',
+ 'Zone de livraison':'Fan lañu koy yóbbal','Adresse ou repère':'Adrees walla màndarga','Heure souhaitée':'Waxtu bi nga bëgg','Dès que possible':'Bu gaaw',
+ 'Date':'Bes','Heure':'Waxtu','Nombre de personnes':'Ñaata nit','Note pour le restaurant':'Bind ngir restoraan bi','Sous-total':'Lépp ci lekk yi',
+ 'Frais de livraison':'Peyu yóbbal','Total':'Lépp','Envoyer ma commande sur WhatsApp':'Yónnee sama komand ci WhatsApp','Envoyer ma réservation sur WhatsApp':'Yónnee sama réservation ci WhatsApp',
+ 'à confirmer':'dañuy wax','Fermer':'Tëj','Votre panier est vide.':'Sa panier amul dara.','Comment voulez-vous votre repas ?':'Naka nga bëgg sa lekk ?',
+ 'Le restaurant vous répond sur WhatsApp pour confirmer.':'Restoraan bi dina la tontu ci WhatsApp ngir dëggal.','Vider':'Far lépp','Menu':'Menu',
+ 'Écrivez votre nom.':'Bindal sa tur.','Écrivez l\'adresse de livraison.':'Bindal adrees bi.','Choisissez la zone de livraison.':'Tànnal fan lañu koy yóbbal.',
+ 'Choisissez au moins un plat.':'Tànnal benn lekk.','Choisissez la date et l\'heure.':'Tànnal bes ak waxtu.','Réserver une table':'Jàppal taabal',
+ 'Cette page n\'est pas disponible pour le moment.':'Xët wii jëfewul leegi.','Lien introuvable.':'Lien bi amul.','Pas de connexion internet.':'Amul internet.','Réessayer':'Jéemaatal',
+ 'Commande envoyée ? Le restaurant va vous confirmer sur WhatsApp.':'Yónne nga komand bi ? Restoraan bi dina la dëggal ci WhatsApp.','Nouvelle commande':'Komand bu bees',
+ 'Texte plus grand':'Bind bu gën a mag','Texte normal':'Bind bu yem'
+};
+let LANG=store('trm.lang')||'fr';
+const t=s=>LANG==='wo'&&WO[s]?WO[s]:s;
+function setLang(){LANG=LANG==='wo'?'fr':'wo';store('trm.lang',LANG);render()}
+let BIG=!!store('trm.big');
+function setBig(){BIG=!BIG;store('trm.big',BIG);document.documentElement.classList.toggle('big',BIG);render()}
+document.documentElement.classList.toggle('big',BIG);
+
+/* ---------- Démo ---------- */
+function ill(bg,a,b,c){const s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="${bg}"/><ellipse cx="200" cy="170" rx="150" ry="95" fill="#ffffff" opacity=".95"/><ellipse cx="200" cy="165" rx="118" ry="70" fill="${a}"/><circle cx="160" cy="150" r="26" fill="${b}"/><circle cx="235" cy="140" r="20" fill="${c}"/><circle cx="215" cy="185" r="16" fill="${b}"/><circle cx="175" cy="190" r="12" fill="${c}"/></svg>`;return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s)}
+function cup(bg,drink){const s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="${bg}"/><path d="M150 70h100l-12 175h-76z" fill="#ffffff" opacity=".9"/><path d="M156 105h88l-9 135h-70z" fill="${drink}"/></svg>`;return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s)}
+function demoData(){const wd=new Date().getDay();
+  return{ok:true,demo:true,nom:'Chez Awa (exemple)',adresse:'Liberté 6, Dakar',texte:'Cuisine sénégalaise faite maison. Thiéb tous les jours à midi, grillades le soir.',whatsapp:'77 879 00 06',horaires:'Tous les jours, 11h – 23h',
+   services:{livraison:true,emporter:true,place:true},zones:[{nom:'Liberté / Sicap',prix:500},{nom:'Parcelles / Grand Yoff',prix:1000},{nom:'Plateau / Almadies',prix:1500}],
+   plats:[
+    {id:'d1',nom:'Thiéboudienne',prix:2000,cat:'Plats',dispo:true,desc:'Riz au poisson frais, légumes et sauce tomate. Pour 1 personne.',jours:[wd],photos:[ill('#E7C9A0','#D9822B','#8C3B1B','#3F7D3A'),ill('#D7E3C4','#D9822B','#B8562B','#F2C14E'),ill('#F3D9B1','#C96E2A','#3F7D3A','#8C3B1B')]},
+    {id:'d2',nom:'Yassa poulet',prix:2000,cat:'Plats',dispo:true,desc:'Poulet mariné au citron et oignons, riz blanc.',jours:[],photos:[ill('#F0E1B8','#F4F1E6','#E3B23C','#6B8E23'),ill('#E9D6A8','#F4F1E6','#C98A1E','#E3B23C')]},
+    {id:'d3',nom:'Mafé',prix:1500,cat:'Plats',dispo:true,desc:'Sauce arachide, viande de bœuf, riz.',jours:[],photos:[ill('#E8CDB0','#9C5A2B','#6B3A1C','#C2853B')]},
+    {id:'d4',nom:'Soupou kandja',prix:2000,cat:'Plats',dispo:false,desc:'Sauce gombo, poisson et fruits de mer.',jours:[],photos:[ill('#D9E2C3','#5E7A2B','#8C3B1B','#3B5A1A')]},
+    {id:'d5',nom:'Pain omelette',prix:500,cat:'Petit-déjeuner',dispo:true,desc:'Pain frais, omelette, oignons.',jours:[],photos:[]},
+    {id:'d6',nom:'Dibi agneau (½ kg)',prix:4000,cat:'Grillades',dispo:true,desc:'Agneau grillé au feu de bois, oignons et moutarde.',jours:[],photos:[ill('#E6CFC0','#7A3A22','#B8562B','#F2C14E')]},
+    {id:'d7',nom:'Bissap',prix:300,cat:'Boissons',dispo:true,desc:'Jus de fleurs d\'hibiscus, bien frais.',jours:[],photos:[cup('#F3D3DC','#9B1D3D')]},
+    {id:'d8',nom:'Bouye',prix:500,cat:'Boissons',dispo:true,desc:'Jus de pain de singe.',jours:[],photos:[cup('#EFE6D6','#E9DFC8')]},
+    {id:'d9',nom:'Thiakry',prix:500,cat:'Desserts',dispo:true,desc:'Couscous de mil au lait caillé sucré.',jours:[],photos:[]}
+   ]}}
+
+/* ---------- Données ---------- */
+const CODE=(()=>{try{const q=new URLSearchParams(location.search);return (q.get('r')||q.get('c')||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)}catch(e){return ''}})();
+const IS_DEMO=!CODE||CODE==='DEMO';
+let R=null, STATE='load', cart={}, mode='', o={zone:'',adr:'',heure:'',date:'',pers:'2',nom:'',tel:'',note:''}, sent=false, catOn='';
+const CK='trm.cart.'+(CODE||'DEMO');
+(function(){const c=store(CK);if(c&&c.cart){cart=c.cart;mode=c.mode||'';o={...o,...(c.o||{})}}})();
+function saveCart(){store(CK,{cart,mode,o})}
+
+async function boot(){
+  if(IS_DEMO){R=demoData();STATE='ok';render();return}
+  const cached=store('trm.menu.'+CODE);if(cached&&cached.ok){R=cached;STATE='ok';render()}
+  const t0=Date.now();while(!window.supabase&&Date.now()-t0<8000)await new Promise(r=>setTimeout(r,150));
+  if(!window.supabase){if(!R){STATE='net';render()}return}
+  try{const sb=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+    const r=await sb.rpc('resto_page_public',{p_code:CODE});if(r.error)throw r.error;
+    const d=r.data||{};
+    if(!d.ok){R=null;STATE=d.raison==='introuvable'?'notfound':'off';try{localStorage.removeItem('trm.menu.'+CODE)}catch(e){}render();return}
+    R=d;STATE='ok';store('trm.menu.'+CODE,d);
+    const ids=new Set(d.plats.map(p=>p.id));for(const k in cart)if(!ids.has(k))delete cart[k];
+    render()}
+  catch(e){if(!R){STATE='net';render()}}
+}
+
+/* ---------- Calculs ---------- */
+const plat=id=>R.plats.find(p=>p.id===id);
+function lines(){return Object.entries(cart).map(([id,q])=>{const p=plat(id);return p&&q>0&&p.dispo!==false?{p,q}:null}).filter(Boolean)}
+function nItems(){return lines().reduce((a,l)=>a+l.q,0)}
+function subTot(){return lines().reduce((a,l)=>a+l.p.prix*l.q,0)}
+function zones(){return Array.isArray(R.zones)?R.zones.filter(z=>z&&z.nom):[]}
+function frais(){if(mode!=='livraison')return 0;const z=zones().find(z=>z.nom===o.zone);return z?Math.max(0,+z.prix||0):0}
+function services(){const s=R.services||{};return[['livraison','Livraison'],['emporter','À emporter'],['place','Sur place']].filter(([k])=>s[k]!==false)}
+
+/* ---------- Affichage ---------- */
+function photos(p){const ph=(Array.isArray(p.photos)?p.photos:[]).filter(u=>typeof u==='string'&&/^(https:|data:image\/)/.test(u)).slice(0,4);
+  const inner=ph.length?ph.map((u,i)=>`<img src="${esc(u)}" alt="${esc(p.nom)}${ph.length>1?' – photo '+(i+1):''}" loading="lazy" decoding="async">`).join('')
+   :`<div class="noimg" aria-hidden="true"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 14h16a8 8 0 0 1-16 0zM2 14h20M12 6v3M8 4v2M16 4v2"/></svg></div>`;
+  return `<div class="pics"><div class="strip" data-n="${ph.length}" onscroll="dotSync(this)">${inner}</div>${ph.length>1?`<div class="dots" aria-hidden="true">${ph.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:''}</div>`}
+function dotSync(el){const i=Math.round(el.scrollLeft/el.clientWidth);const d=el.parentNode.querySelectorAll('.dots i');d.forEach((x,j)=>x.classList.toggle('on',j===i))}
+function card(p,jour){const q=cart[p.id]||0,out=p.dispo===false;
+  return `<article class="card ${out?'out':''}">${photos(p)}
+   ${out?`<span class="badge b-out">${t('Épuisé')}</span>`:jour?`<span class="badge b-jour">${t('Plat du jour')}</span>`:''}
+   <div class="cb"><h3>${esc(p.nom)}</h3>${p.desc?`<div class="desc">${esc(p.desc)}</div>`:''}
+    <div class="cf"><span class="price">${F(p.prix)}</span>
+     ${out?`<button class="add" disabled>${t('Épuisé')}</button>`:q?`<div class="qty"><button onclick="dec('${esc(p.id)}')" aria-label="Moins de ${esc(p.nom)}">−</button><b aria-live="polite">${q}</b><button onclick="inc('${esc(p.id)}')" aria-label="Plus de ${esc(p.nom)}">+</button></div>`:`<button class="add" onclick="inc('${esc(p.id)}')">+ ${t('Ajouter')}</button>`}
+    </div></div></article>`}
+function sections(){const wd=new Date().getDay(),P=R.plats||[];const S=[];
+  const jour=P.filter(p=>Array.isArray(p.jours)&&p.jours.includes(wd)&&p.dispo!==false);
+  if(jour.length)S.push({id:'jour',nom:t('Plat du jour'),L:jour,jour:true});
+  const cats=[...CATS,...[...new Set(P.map(p=>p.cat))].filter(c=>!CATS.includes(c))];
+  cats.forEach(c=>{const L=P.filter(p=>p.cat===c&&!jour.includes(p)).sort((a,b)=>(a.dispo===false)-(b.dispo===false));if(L.length)S.push({id:'c'+cats.indexOf(c),nom:c,L})});
+  return S}
+function render(){const A=$('app');
+  if(STATE==='load'){A.innerHTML=`<div class="state"><h1>Teranga Resto</h1><div class="muted">Chargement du menu…</div></div>`;return}
+  if(STATE!=='ok'){const m={off:t('Cette page n\'est pas disponible pour le moment.'),notfound:t('Lien introuvable.'),net:t('Pas de connexion internet.')}[STATE];
+    A.innerHTML=`<div class="state"><h1>${esc(m)}</h1>${STATE==='net'?`<button class="add" onclick="STATE='load';render();boot()">${t('Réessayer')}</button>`:'<div class="muted">Vérifiez le lien avec le restaurant.</div>'}</div>`;return}
+  const S=sections(),n=nItems();if(!catOn&&S[0])catOn=S[0].id;
+  document.title=(R.nom||'Restaurant')+' · Menu';
+  A.innerHTML=`${R.demo?`<div class="demo">Exemple de page client : menu et photos d'exemple</div>`:''}
+  <header class="hero"><div class="hin">
+   <div class="tools"><button class="tbtn" onclick="setBig()" aria-pressed="${BIG}" aria-label="${BIG?t('Texte normal'):t('Texte plus grand')}">${BIG?'A−':'A+'}</button><button class="tbtn" onclick="setLang()">${LANG==='wo'?'Français':'Wolof'}</button></div>
+   <h1>${esc(R.nom||'Restaurant')}</h1>${R.texte?`<p>${esc(R.texte)}</p>`:''}
+   <div class="chipsI">${R.horaires?`<span class="ci">🕒 ${esc(R.horaires)}</span>`:''}${R.adresse?`<span class="ci">📍 ${esc(R.adresse)}</span>`:''}${services().map(([k,l])=>`<span class="ci">${t(l)}</span>`).join('')}</div>
+  </div></header>
+  <nav class="cats" aria-label="${t('Menu')}"><div class="in">${S.map(s=>`<button class="cat ${catOn===s.id?'on':''}" onclick="goCat('${s.id}')">${esc(s.jour?s.nom:t(s.nom))}</button>`).join('')}</div></nav>
+  <main>${S.map(s=>`<section class="sec" id="s_${s.id}"><h2>${esc(s.jour?s.nom:t(s.nom))}</h2><div class="grid">${s.L.map(p=>card(p,s.jour)).join('')}</div></section>`).join('')||'<div class="state"><div class="muted">Le menu arrive bientôt.</div></div>'}
+   ${services().some(([k])=>k==='place')?`<div style="padding-top:22px"><button class="add" style="width:100%" onclick="mode='place';openOrder()">${t('Réserver une table')}</button></div>`:''}
+   <div class="foot">Page créée avec Teranga Resto · Seck Tech</div></main>
+  <div class="bar"><button onclick="openOrder()" ${n?'':'disabled style="opacity:.55;cursor:default"'}><span><span class="n">${n}</span>${t('Ma commande')}</span><span>${F(subTot())}</span></button></div>`;
+  if($('ovWrap').innerHTML)drawOrder();
+}
+function goCat(id){catOn=id;document.querySelectorAll('.cat').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick')===`goCat('${id}')`));const e=$('s_'+id);if(e)e.scrollIntoView({behavior:'smooth',block:'start'})}
+function inc(id){const p=plat(id);if(!p||p.dispo===false)return;cart[id]=Math.min(50,(cart[id]||0)+1);sent=false;saveCart();keepScroll(render)}
+function dec(id){cart[id]=Math.max(0,(cart[id]||0)-1);if(!cart[id])delete cart[id];saveCart();keepScroll(render)}
+function keepScroll(fn){const y=window.scrollY,st=[...document.querySelectorAll('.strip')].map(s=>s.scrollLeft);fn();window.scrollTo(0,y);document.querySelectorAll('.strip').forEach((s,i)=>{if(st[i])s.scrollLeft=st[i]})}
+
+/* ---------- Commande ---------- */
+function openOrder(){const sv=services().map(([k])=>k);if(!sv.includes(mode))mode=sv.length===1?sv[0]:(sv.includes(mode)?mode:'');sent=false;
+  $('ovWrap').innerHTML=`<div class="ov" onclick="if(event.target===this)closeOrder()"><div class="sheet" role="dialog" aria-modal="true" aria-label="${t('Ma commande')}" id="sheet"></div></div>`;drawOrder()}
+function closeOrder(){$('ovWrap').innerHTML='';render()}
+function rd(){['zone','adr','heure','date','pers','nom','tel','note'].forEach(k=>{const e=$('o_'+k);if(e)o[k]=e.value});saveCart()}
+function drawOrder(){const L=lines(),sv=services(),Z=zones(),sh=$('sheet');if(!sh)return;
+  const nd=new Date(),today=nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-'+String(nd.getDate()).padStart(2,'0');
+  sh.innerHTML=`<div class="sh"><h2>${t('Ma commande')}</h2><button class="x" onclick="closeOrder()">${t('Fermer')}</button></div>
+  <div class="box">${L.length?L.map(l=>`<div class="line"><div class="g"><b>${esc(l.p.nom)}</b><div class="muted">${F(l.p.prix)}</div></div><div class="qty"><button onclick="dec('${esc(l.p.id)}')" aria-label="Moins">−</button><b>${l.q}</b><button onclick="inc('${esc(l.p.id)}')" aria-label="Plus">+</button></div></div>`).join(''):`<div class="muted">${t('Votre panier est vide.')}</div>`}
+   ${L.length?`<button class="x" style="align-self:flex-start" onclick="cart={};saveCart();drawOrder()">${t('Vider')}</button>`:''}</div>
+  <div class="box"><b>${t('Comment voulez-vous votre repas ?')}</b>
+   <div class="modes">${sv.map(([k,l])=>`<button class="mode ${mode===k?'on':''}" onclick="rd();mode='${k}';saveCart();drawOrder()" aria-pressed="${mode===k}">${t(l)}</button>`).join('')}</div>
+   ${mode==='livraison'?`${Z.length?`<label class="f">${t('Zone de livraison')}<select id="o_zone" onchange="rd();drawOrder()"><option value="">—</option>${Z.map(z=>`<option value="${esc(z.nom)}" ${o.zone===z.nom?'selected':''}>${esc(z.nom)} · ${F(z.prix)}</option>`).join('')}</select></label>`:''}
+     <label class="f">${t('Adresse ou repère')}<input id="o_adr" value="${esc(o.adr)}" placeholder="Ex : Parcelles U17, près de la pharmacie" oninput="rd();upd()"></label>
+     <label class="f">${t('Heure souhaitée')}<input id="o_heure" type="time" value="${esc(o.heure)}" oninput="rd();upd()"></label><div class="muted" style="font-size:.85em">${t('Dès que possible')} : laissez vide.</div>`:''}
+   ${mode==='emporter'?`<label class="f">${t('Heure souhaitée')}<input id="o_heure" type="time" value="${esc(o.heure)}" oninput="rd();upd()"></label>`:''}
+   ${mode==='place'?`<div class="row2"><label class="f">${t('Date')}<input id="o_date" type="date" min="${today}" value="${esc(o.date||today)}" oninput="rd();upd()"></label><label class="f">${t('Heure')}<input id="o_heure" type="time" value="${esc(o.heure)}" oninput="rd();upd()"></label></div>
+     <label class="f">${t('Nombre de personnes')}<input id="o_pers" type="number" min="1" max="200" inputmode="numeric" value="${esc(o.pers)}" oninput="rd();upd()"></label>`:''}
+  </div>
+  <div class="box"><div class="row2"><label class="f">${t('Votre nom')}<input id="o_nom" autocomplete="name" value="${esc(o.nom)}" oninput="rd();upd()"></label>
+   <label class="f">${t('Votre téléphone')}<input id="o_tel" type="tel" autocomplete="tel" inputmode="tel" value="${esc(o.tel)}" oninput="rd();upd()"></label></div>
+   <label class="f">${t('Note pour le restaurant')}<textarea id="o_note" rows="2" placeholder="Ex : sans piment, bien cuit…" oninput="rd();upd()">${esc(o.note)}</textarea></label></div>
+  <div class="box">${L.length?`<div class="sub"><span>${t('Sous-total')}</span><span>${F(subTot())}</span></div>`:''}
+   ${mode==='livraison'?`<div class="sub"><span>${t('Frais de livraison')}</span><span>${Z.length&&o.zone?F(frais()):t('à confirmer')}</span></div>`:''}
+   <div class="tot"><span>${t('Total')}</span><span>${F(subTot()+frais())}${mode==='livraison'&&!(Z.length&&o.zone)&&L.length?' +':''}</span></div></div>
+  <div id="oerr" class="err" role="alert"></div>
+  <a id="sendA" class="send" href="#" target="_blank" rel="noopener" onclick="return trySend(event)"><svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.6-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg><span id="sendT"></span></a>
+  <div class="muted" style="text-align:center">${t('Le restaurant vous répond sur WhatsApp pour confirmer.')}</div>
+  ${sent?`<div class="box" style="text-align:center"><b>${t('Commande envoyée ? Le restaurant va vous confirmer sur WhatsApp.')}</b><button class="add" onclick="cart={};sent=false;saveCart();closeOrder()">${t('Nouvelle commande')}</button></div>`:''}`;
+  upd()}
+function problem(){const L=lines();
+  if(!mode)return t('Comment voulez-vous votre repas ?');
+  if(!L.length&&mode!=='place')return t('Choisissez au moins un plat.');
+  if(mode==='livraison'&&zones().length&&!o.zone)return t('Choisissez la zone de livraison.');
+  if(mode==='livraison'&&o.adr.trim().length<3)return t('Écrivez l\'adresse de livraison.');
+  if(mode==='place'&&(!o.date||!o.heure))return t('Choisissez la date et l\'heure.');
+  if(o.nom.trim().length<2)return t('Écrivez votre nom.');
+  return ''}
+function message(){const L=lines(),M={livraison:'Livraison',emporter:'À emporter',place:'Sur place'}[mode];const z=zones().find(z=>z.nom===o.zone);
+  const fd=d=>d?d.split('-').reverse().join('/'):'';
+  const out=[`Bonjour ${R.nom||''} 👋`,mode==='place'&&!L.length?'*Réservation de table* (depuis votre page)':'*Nouvelle commande* (depuis votre page)',''];
+  out.push(`📍 ${M}`+(mode==='livraison'&&z?` – ${z.nom}`:''));
+  if(L.length){out.push('');L.forEach(l=>out.push(`${l.q} × ${l.p.nom} — ${F(l.p.prix*l.q)}`))}
+  if(mode==='livraison')out.push(`Livraison : ${z?F(z.prix):'à confirmer'}`);
+  if(L.length)out.push(`*TOTAL : ${F(subTot()+frais())}*${mode==='livraison'&&!z?' + livraison':''}`);
+  out.push('');out.push(`Nom : ${o.nom.trim()}`);if(o.tel.trim())out.push(`Tél : ${o.tel.trim()}`);
+  if(mode==='livraison'){out.push(`Adresse : ${o.adr.trim()}`);out.push(`Heure : ${o.heure||'dès que possible'}`)}
+  if(mode==='emporter')out.push(`Heure de retrait : ${o.heure||'dès que possible'}`);
+  if(mode==='place'){out.push(`Table pour ${Math.max(1,+o.pers||1)} personne(s)`);out.push(`Le ${fd(o.date)} à ${o.heure}`)}
+  if(o.note.trim())out.push(`Note : ${o.note.trim()}`);
+  out.push('','Merci de confirmer 🙏');return out.join('\n')}
+function upd(){const a=$('sendA'),tx=$('sendT');if(!a)return;const L=lines();
+  tx.textContent=mode==='place'&&!L.length?t('Envoyer ma réservation sur WhatsApp'):t('Envoyer ma commande sur WhatsApp');
+  const p=problem();a.setAttribute('aria-disabled',p?'true':'false');a.style.opacity=p?'.6':'1';
+  a.href=p?'#':'https://wa.me/'+waNum(R.whatsapp)+'?text='+encodeURIComponent(message())}
+function trySend(e){rd();upd();const p=problem();if(p){e.preventDefault();$('oerr').textContent=p;return false}
+  if(waNum(R.whatsapp).length<11){e.preventDefault();$('oerr').textContent='Numéro WhatsApp du restaurant manquant.';return false}
+  $('oerr').textContent='';setTimeout(()=>{sent=true;drawOrder()},600);return true}
+
+boot();
+</script>
+
+</body>
+</html>
