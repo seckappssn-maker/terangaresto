@@ -129,7 +129,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--bissap);border-c
 .nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .nav button.on{color:var(--bissap);background:var(--bissap-soft)}
 .ov{position:fixed;inset:0;z-index:20;background:rgba(8,18,24,.55);display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.sheet>*{flex-shrink:0}
 .sheet h2{font-size:22px}
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mode{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 8px;font-weight:800;cursor:pointer;font-size:16px}
@@ -801,7 +802,7 @@ function platModal(id){if(!isP()){toast('Seul le patron peut changer les plats e
    <label class="f">Description pour les clients (facultatif)<textarea id="m_desc" rows="2" maxlength="300" placeholder="Ex : riz au poisson, légumes, sauce tomate. Pour 1 personne.">${esc(p.desc||'')}</textarea></label>
    <label class="chk"><input type="checkbox" id="m_web" ${p.enLigne!==false?'checked':''}> Afficher sur ma page client</label>
    <div class="lbl">${t('Plat du jour')} le…</div>
-   <div class="chips" style="flex-wrap:wrap">${[1,2,3,4,5,6,0].map(j=>`<label class="chip"><input type="checkbox" class="m_j" value="${j}" ${p.jours&&p.jours.includes(j)?'checked':''} style="width:auto;margin-right:6px">${JOURS[j]}</label>`).join('')}</div>
+   <div class="chips" style="flex-wrap:wrap;overflow:visible">${[1,2,3,4,5,6,0].map(j=>`<label class="chip"><input type="checkbox" class="m_j" value="${j}" ${p.jours&&p.jours.includes(j)?'checked':''} style="width:auto;margin-right:6px">${JOURS[j]}</label>`).join('')}</div>
    <button class="btn full" onclick="savePlat('${id||''}')">${t('Enregistrer')}</button>
    ${id?`<button class="btn ghost full" style="color:var(--bad)" onclick="delPlat('${id}')">${t('Supprimer')} ce plat</button>`:''}
    <button class="btn ghost full" onclick="cancelPlat()">${t('Annuler')}</button>`)}
