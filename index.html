@@ -66,6 +66,11 @@ main{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;flex-directio
 .btn:focus-visible,.chip:focus-visible,.tile:focus-visible,.lang:focus-visible,.nav button:focus-visible{outline:3px solid var(--ochre);outline-offset:2px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.card>*{flex-shrink:0}
+.chips{flex-shrink:0}
+.typebar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex-shrink:0}
+.typebar .chip{min-height:52px;font-size:16px;padding:8px 6px;border-radius:14px;text-align:center;color:var(--ink);white-space:normal;line-height:1.15}
+.typebar .chip.on{color:var(--bg)}
 .chip{flex:none;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:15px}
 .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .plats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
@@ -530,7 +535,7 @@ function vCaisse(){
     <div class="muted" style="font-size:14px">${t('Déjà commandé')} : ${addO.items.map(i=>i.q+' × '+esc(i.nom)).join(', ')} (${F(tot(addO))})</div>
     <button class="btn sm ghost" onclick="cart=newCart();go('commandes')">${t('Annuler l\'ajout')}</button></div>`:`
     <div class="row between"><h2 style="font-size:20px">${t('Nouvelle commande')}</h2>${lines.length?`<button class="btn sm ghost" onclick="cart=newCart();render()">${t('Vider')}</button>`:''}</div>
-    <div class="chips">${[['place','Sur place'],['emporter','À emporter'],['livraison','Livraison']].map(([k,l])=>`<button class="chip ${cart.type===k?'on':''}" onclick="cart.type='${k}';render()">${t(l)}</button>`).join('')}</div>
+    <div class="typebar">${[['place','🍽️ Sur place'],['emporter','🥡 À emporter'],['livraison','🛵 Livraison']].map(([k,l])=>`<button class="chip ${cart.type===k?'on':''}" onclick="cart.type='${k}';render()">${l.split(' ')[0]} ${t(l.slice(l.indexOf(' ')+1))}</button>`).join('')}</div>
     ${cart.type==='place'?`<div class="row"><label class="f">${t('Table')} n°<input id="c_table" inputmode="numeric" value="${esc(cart.table)}" oninput="cart.table=this.value"></label></div>`:''}
     ${cart.type==='emporter'?`<div class="row"><label class="f">${t('Nom (facultatif)')}<input id="c_nom" placeholder="Pour l'appeler quand c'est prêt" value="${esc(cart.nom)}" oninput="cart.nom=this.value"></label></div>`:''}
     ${cart.type==='livraison'?`<div class="row">
