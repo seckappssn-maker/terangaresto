@@ -397,13 +397,13 @@ let audioCtx=null;
 function unlockAudio(){try{if(!audioCtx){const A=window.AudioContext||window.webkitAudioContext;if(A)audioCtx=new A()}if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();if(window.speechSynthesis&&!unlockAudio.done){const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);unlockAudio.done=true}}catch(e){}}
 document.addEventListener('pointerdown',unlockAudio,{passive:true});
 function toggleVoix(){voixOn=!voixOn;try{localStorage.setItem('terangaResto_voix',voixOn?'on':'off')}catch(e){}unlockAudio();document.getElementById('voixBtn').textContent=voixOn?'🔊':'🔇';
-  toast(voixOn?'Voix activée : les commandes sont annoncées à voix haute':'Voix coupée (le message s\'affiche quand même)');if(voixOn)parler('La voix est activée')}
+  toast(voixOn?'Son activé : les commandes sont annoncées à voix haute':'Son coupé : plus de voix ni de ding (le message s\'affiche quand même)');if(voixOn)parler('La voix est activée')}
 function ding(){try{unlockAudio();if(!audioCtx)return;const t0=audioCtx.currentTime;[[880,0],[1175,.18]].forEach(([f,d])=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t0+d);g.gain.exponentialRampToValueAtTime(.4,t0+d+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+d+.45);o.connect(g).connect(audioCtx.destination);o.start(t0+d);o.stop(t0+d+.5)})}catch(e){}}
 function parler(txt){try{if(!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='fr-FR';const v=speechSynthesis.getVoices().find(x=>/^fr/i.test(x.lang));if(v)u.voice=v;u.rate=.95;speechSynthesis.speak(u)}catch(e){}}
 function bandeau(html,col){const w=document.getElementById('pretWrap');if(!w.firstChild){w.innerHTML='<div class="pretbox"></div>'}
   const box=w.firstChild,el=document.createElement('div');el.className='pret';el.style.background=col;el.setAttribute('role','alert');
   el.innerHTML=html+'<button>OK</button>';el.querySelector('button').style.color=col;
-  const close=()=>{el.remove();if(!box.children.length)w.innerHTML=''};el.querySelector('button').onclick=close;setTimeout(close,60000);box.prepend(el);ding()}
+  const close=()=>{el.remove();if(!box.children.length)w.innerHTML=''};el.querySelector('button').onclick=close;setTimeout(close,60000);box.prepend(el);if(voixOn)ding()}
 function ouTxt(o){return o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison':'À emporter'}
 function annonceCuisine(o,ajout){if(!me)return;const estCuisine=me.role==='cuisine'||tab==='cuisine';if(!estCuisine)return;
   if(!ajout&&Date.now()-new Date(o.date).getTime()>10*60000)return;
