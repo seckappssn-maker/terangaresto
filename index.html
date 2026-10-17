@@ -98,6 +98,20 @@ main{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;flex-directio
 .plat span{color:var(--muted);font-weight:700;font-size:16px}
 .plat.jour{border-color:var(--ochre);background:var(--ochre-soft)}
 .plat.off{opacity:.45}
+.cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px}
+.cat{border:0;border-bottom:5px solid var(--cc);border-radius:12px;min-height:50px;padding:6px 8px;font-weight:800;font-size:15px;cursor:pointer;background:var(--bissap-soft);color:var(--ink);line-height:1.15;box-shadow:inset 0 0 0 2px transparent}
+.cat.on{background:var(--cc,var(--ink));color:#fff;box-shadow:inset 0 0 0 3px rgba(0,0,0,.25)}
+.btns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.bt{position:relative;border:0;border-radius:14px;min-height:84px;padding:10px 6px;background:var(--cc,#155E83);color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;font-weight:800;line-height:1.15;-webkit-tap-highlight-color:transparent}
+.bt b{font-size:14px;text-transform:uppercase;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bt span{font-size:14px;font-weight:700;opacity:.92}
+.bt:active{transform:scale(.97);filter:brightness(1.1)}
+.bt.off{opacity:.35}
+.bt.jour::before{content:"★";position:absolute;top:5px;left:8px;font-size:14px}
+.bt .q{position:absolute;top:5px;right:6px;background:#fff;color:#13222C;border-radius:999px;min-width:26px;height:26px;display:grid;place-items:center;font-weight:800;font-size:14px;padding:0 6px}
+.vtog{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:700;font-size:14px;cursor:pointer;color:var(--muted)}
+.bt{padding-top:22px}.bt .q{top:3px;right:4px;min-width:22px;height:22px;font-size:13px}
+@media (min-width:700px){.bt{padding-top:10px}.bt .q{top:5px;right:6px;min-width:26px;height:26px;font-size:14px}.btns{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.bt{min-height:92px}.bt b{font-size:16px}}
 .plat .q{position:absolute;top:-8px;right:-6px;background:var(--bissap);color:var(--on-accent);border-radius:999px;min-width:28px;height:28px;display:grid;place-items:center;font-weight:800;font-size:15px;padding:0 6px}
 .tag{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap}
 .t-jour{background:var(--ochre);color:var(--on-accent)}
@@ -219,6 +233,10 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const JOURS=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const JOURS_WO=['Dibéer','Altine','Talaata','Àllarba','Alxames','Àjjuma','Gaawu'];
 const CATS=['Plats','Petit-déjeuner','Grillades','Boissons','Desserts'];
+const CAT_COL={'Rapide':'#13222C','Plats':'#2E7D4F','Petit-déjeuner':'#B4610F','Grillades':'#B3261E','Boissons':'#1565C0','Desserts':'#7B3FA0'};
+const catCol=c=>CAT_COL[c]||'#155E83';
+let caisseVue=(()=>{try{return localStorage.getItem('terangaResto_vue')||'boutons'}catch(e){return 'boutons'}})();
+function setVue(v){caisseVue=v;try{localStorage.setItem('terangaResto_vue',v)}catch(e){}render()}
 const DEP_CATS=['Marché (légumes)','Poisson','Viande / Poulet','Riz','Huile','Gaz','Charbon','Eau / Électricité','Loyer','Personnel','Transport','Emballages','Autre'];
 const EV_TYPES=['Mariage','Baptême','Magal','Gamou','Tabaski','Korité','Anniversaire','Entreprise','Autre'];
 const MODES={especes:'Espèces',wave:'Wave',om:'Orange Money',mixte:'Espèces + Wave/OM',partage:'Chacun sa part',credit:'Crédit (dette)',abonne:'Abonnement'};
@@ -510,7 +528,7 @@ function rapides(){
   S.orders.forEach(o=>{if(!o.annule&&new Date(o.date).getTime()>=from)o.items.forEach(i=>cnt[i.pid]=(cnt[i.pid]||0)+i.q)});
   const jour=S.plats.filter(p=>p.jours&&p.jours.includes(wd));
   const top=S.plats.filter(p=>!jour.includes(p)).sort((a,b)=>(cnt[b.id]||0)-(cnt[a.id]||0)||(a.cat==='Plats'?-1:0));
-  return [...jour,...top].filter(p=>p.dispo).slice(0,12);
+  return [...jour,...top].filter(p=>p.dispo).slice(0,caisseVue==='boutons'?16:12);
 }
 function vCaisse(){
   const wd=new Date().getDay();
@@ -523,14 +541,27 @@ function vCaisse(){
   if(addO&&(addO.paye||addO.annule)){cart.addTo='';addO=null}
   const pl=p=>`<button class="plat ${p.jours&&p.jours.includes(wd)?'jour':''} ${p.dispo?'':'off'}" onclick="addP('${p.id}')" ${p.dispo?'':'disabled'}>
       ${cart.items[p.id]?`<span class="q">${cart.items[p.id]}</span>`:''}${withPh?photoBox(p):''}<b>${esc(p.nom)}</b><span>${F(p.prix)}</span>${p.dispo?'':`<span class="tag t-du">${t('Fini')}</span>`}</button>`;
+  const bt=p=>`<button class="bt ${p.jours&&p.jours.includes(wd)?'jour':''} ${p.dispo?'':'off'}" style="--cc:${catCol(p.cat)}" onclick="addP('${p.id}')" ${p.dispo?'':'disabled'}>
+      ${cart.items[p.id]?`<span class="q">${cart.items[p.id]}</span>`:''}<b>${esc(p.nom)}</b><span>${p.dispo?F(p.prix):t('Fini')}</span></button>`;
+  const bList=catF==='Rapide'?list:list.slice().sort((a,b)=>(b.dispo?1:0)-(a.dispo?1:0));
+  const vueBtn=`<button class="vtog" onclick="setVue('${caisseVue==='boutons'?'photos':'boutons'}')">${caisseVue==='boutons'?'🖼️ Photos':'▦ Boutons'}</button>`;
+  if(caisseVue==='boutons')return `<div class="caisse"><div class="cleft">
+  <section class="card">
+    <div class="cats">${['Rapide',...CATS].map(c=>`<button class="cat ${catF===c?'on':''}" style="--cc:${catCol(c)}" onclick="catF='${c}';render()">${c==='Rapide'?'⚡ '+t('Rapide'):t(c)}</button>`).join('')}</div>
+    <div class="btns">${bList.map(bt).join('')||`<div class="empty" style="grid-column:1/-1">${catF==='Rapide'?'Aucun plat disponible. Ajoutez-en dans Menu.':'Aucun plat ici. Ajoutez-en dans Menu.'}</div>`}</div>
+    <div class="row between"><span class="muted" style="font-size:13px">${catF==='Rapide'?'★ '+t('Plat du jour')+' · les plus vendus':''}</span>${vueBtn}</div>
+  </section>
+  </div>${cartPanel()}</div>`;
   return `<div class="caisse"><div class="cleft">
   ${jour.length&&catF!=='Rapide'?`<section class="card"><div class="lbl">${t('Plat du jour')}</div><div class="plats">${jour.map(pl).join('')}</div></section>`:''}
   <section class="card">
     <div class="chips">${['Rapide',...CATS].map(c=>`<button class="chip ${catF===c?'on':''}" onclick="catF='${c}';render()">${c==='Rapide'?'⚡ '+t('Rapide'):t(c)}</button>`).join('')}</div>
     ${catF==='Rapide'?rapideZones().map(([lbl,L])=>`<div class="zone"><div class="lbl">${lbl}</div><div class="plats">${L.map(pl).join('')}</div></div>`).join('')||'<div class="empty">Aucun plat disponible. Ajoutez-en dans Menu.</div>'
       :`<div class="plats">${list.map(pl).join('')||'<div class="empty">Aucun plat ici. Ajoutez-en dans Menu.</div>'}</div>`}
+    <div class="row" style="justify-content:flex-end">${vueBtn}</div>
   </section>
-  </div><section class="card cright">
+  </div>${cartPanel()}</div>`;
+  function cartPanel(){return `<section class="card cright">
   ${addO?`<div class="banner"><div><b>${t('Ajout')} · n°${addO.n}</b>${addO.table?' · '+t('Table')+' '+esc(addO.table):''}${addO.client&&addO.client.nom?' · '+esc(addO.client.nom):''}</div>
     <div class="muted" style="font-size:14px">${t('Déjà commandé')} : ${addO.items.map(i=>i.q+' × '+esc(i.nom)).join(', ')} (${F(tot(addO))})</div>
     <button class="btn sm ghost" onclick="cart=newCart();go('commandes')">${t('Annuler l\'ajout')}</button></div>`:`
@@ -557,7 +588,7 @@ function vCaisse(){
     ${addO?`<button class="btn full" style="min-height:58px" onclick="valider(false)">${t('Ajouter et envoyer en cuisine')}</button>`:me.role==='serveur'?`<button class="btn full" onclick="valider(false)">${t('Envoyer en cuisine')}</button>`:`<div class="paybar">
       <button class="btn pay" onclick="valider('especes')">${t('Espèces')}</button><button class="btn pay" onclick="valider('wave')">Wave</button><button class="btn pay" onclick="valider('om')">Orange Money</button></div>
       <div class="grid2"><button class="btn alt" onclick="valider(false)">${t('Envoyer en cuisine')} · ${t('payer après')}</button><button class="btn ghost" onclick="valider(true)">${t('Mixte, dette, abonné…')}</button></div>`}
-  </section></div>`;
+  </section>`}
 }
 function updTot(){const lines=Object.entries(cart.items).filter(([,q])=>q>0);let s=0;lines.forEach(([id,q])=>{const p=S.plats.find(x=>x.id===id);if(p)s+=p.prix*q});if(cart.type==='livraison'&&!cart.addTo)s+=+cart.frais||0;const e=document.getElementById('cartTot');if(e)e.textContent=F(s)}
 function addP(id){cart.items[id]=(cart.items[id]||0)+1;render()}
