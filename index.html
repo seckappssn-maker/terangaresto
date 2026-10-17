@@ -150,6 +150,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--bissap);border-c
 .pret .sm{font-size:15px;opacity:.95;font-weight:600}
 .pret button{margin-left:auto;border:0;background:#fff;font-weight:800;font-size:17px;border-radius:12px;padding:12px 18px;cursor:pointer;flex:none}
 @keyframes pin{from{transform:translateY(-30px);opacity:0}}
+.order.s-web{--oc:#7B3FA0;background:color-mix(in srgb,#7B3FA0 9%,var(--surface));box-shadow:0 0 0 2px #7B3FA0}
+.wbadge{background:#7B3FA0;color:#fff;border-radius:999px;padding:1px 7px;font-size:12px;font-weight:800}
+.webhead{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:800;font-size:19px;color:#7B3FA0}
 .order .num{font-family:var(--f-display);font-weight:800;font-size:20px}
 .stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 .stat div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -389,7 +392,8 @@ async function sync(full){if(DEMO||!SB||!USER||syncing)return;syncing=true;let c
   if(ch||tab==='cuisine')softRender();
   if(full){pretQueue=[];cuisQueue=[]}
   if(pretQueue.length){const q=pretQueue.splice(0);q.forEach(annoncePrete)}
-  if(cuisQueue.length){const q=cuisQueue.splice(0);q.forEach(([o,aj])=>annonceCuisine(o,aj))}}
+  if(cuisQueue.length){const q=cuisQueue.splice(0);q.forEach(([o,aj])=>annonceCuisine(o,aj))}
+  fetchWeb()}
 /* ---------- Annonce « commande prête » (caisse / serveur) ---------- */
 let pretQueue=[],cuisQueue=[];
 let voixOn=(()=>{try{return localStorage.getItem('terangaResto_voix')!=='off'}catch(e){return true}})();
@@ -415,6 +419,57 @@ function annoncePrete(o){if(!me||me.role==='cuisine')return;if(me.role==='serveu
   const ou=o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison'+(o.client&&o.client.quartier?' · '+o.client.quartier:''):'À emporter'+(o.client&&o.client.nom?' · '+o.client.nom:'');
   bandeau(`<div><div class="big">🔔 n°${o.n} ${t('Prête')} !</div><div class="sm">${esc(ou)} · ${o.items.map(i=>i.q+' × '+esc(i.nom)).join(', ')}</div></div>`,'#1E7FD8');
   if(voixOn)setTimeout(()=>parler(`Commande numéro ${o.n} prête. `+(o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison':'À emporter')),700)}
+/* ---------- Commandes en ligne (page clients) ---------- */
+let WEB=[],webSeen=null,webOff=false,webBusy=false;
+function webVoit(){return !!me&&(me.role==='patron'||me.role==='caissier'||isP())}
+function demoWeb(){const P=S.plats.filter(p=>p.dispo);if(!P.length)return[];const a=P[0],b=P.find(p=>p.cat==='Boissons')||P[1]||a;
+  return[{id:'web-demo',created_at:new Date(Date.now()-60000).toISOString(),statut:'nouveau',data:{mode:'livraison',nom:'Fatou Ndiaye (exemple)',tel:'770000009',zone:'Liberté / Sicap',adr:'Liberté 6, près de la mosquée',heure:'',frais:500,note:'Sans piment',items:[{pid:a.id,nom:a.nom,prix:a.prix,q:2},{pid:b.id,nom:b.nom,prix:b.prix,q:2}]}}]}
+async function fetchWeb(){if(!webVoit())return;
+  if(DEMO){if(webSeen===null){WEB=demoWeb();webSeen=new Set(WEB.map(w=>w.id))}return}
+  if(!SB||!USER||webOff||webBusy)return;webBusy=true;
+  try{const r=await SB.from('resto_web_orders').select('id,created_at,statut,data').eq('statut','nouveau').order('created_at');
+    if(r.error){if(/does not exist|schema cache|relation/i.test(r.error.message||''))webOff=true;return}
+    const L=r.data||[],first=webSeen===null;if(first)webSeen=new Set();
+    const nouveaux=L.filter(w=>!webSeen.has(w.id));L.forEach(w=>webSeen.add(w.id));
+    const chg=JSON.stringify(L.map(w=>w.id))!==JSON.stringify(WEB.map(w=>w.id));WEB=L;
+    if(chg)softRender();
+    nouveaux.forEach(w=>{if(Date.now()-new Date(w.created_at).getTime()<30*60000)annonceWeb(w)})}
+  catch(e){}finally{webBusy=false}}
+function webTot(d){return (d.items||[]).reduce((a,i)=>a+i.prix*i.q,0)+(+d.frais||0)}
+function webOu(d){return d.mode==='livraison'?'🛵 Livraison'+(d.zone?' · '+d.zone:''):d.mode==='emporter'?'🥡 À emporter':'🍽️ Sur place'}
+function annonceWeb(w){const d=w.data||{};const resa=d.mode==='place'&&!(d.items||[]).length;
+  bandeau(`<div><div class="big">🌐 ${resa?'Réservation en ligne':'Commande en ligne'}</div><div class="sm">${esc(d.nom||'')} · ${esc(webOu(d))}${resa?'':' · '+F(webTot(d))}</div></div>`,'#7B3FA0');
+  if(voixOn)setTimeout(()=>parler(resa?'Nouvelle réservation en ligne':'Nouvelle commande en ligne. '+(d.mode==='livraison'?'Livraison':d.mode==='emporter'?'À emporter':'Sur place')),700)}
+function vWeb(){if(!webVoit()||!WEB.length)return '';
+  return `<div class="webhead">🌐 ${t('En ligne')} · ${t('à confirmer')} (${WEB.length})</div><div class="olist">${WEB.map(w=>{const d=w.data||{},I=d.items||[],resa=d.mode==='place'&&!I.length;
+   const fd=x=>x?x.split('-').reverse().join('/'):'';
+   return `<article class="order s-web">
+    <div class="row between"><span class="row" style="gap:10px"><span class="ostat" style="--oc:#7B3FA0">🌐 ${resa?'Réservation':'En ligne'}</span><span class="tag t-neutre">${esc(webOu(d))}</span></span><span class="muted">${new Date(w.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
+    <div><b>${esc(d.nom||'')}</b> ${esc(d.tel||'')}</div>
+    ${d.mode==='livraison'?`<div>📍 ${esc(d.adr||'')}</div>`:''}
+    ${d.mode==='place'?`<div>📅 ${fd(d.date)} ${esc(d.heure||'')} · ${+d.pers||1} pers.</div>`:d.heure?`<div>🕐 ${esc(d.heure)}</div>`:`<div class="muted">🕐 ${t('Dès que possible')}</div>`}
+    ${I.length?`<div>${I.map(i=>i.q+' × '+esc(i.nom)).join(', ')}${d.frais?' + '+t('Livraison').toLowerCase()+' '+F(d.frais):''}</div>`:''}
+    ${d.note?`<div><b>Note :</b> ${esc(d.note)}</div>`:''}
+    <div class="row between"><b style="font-size:20px">${I.length?F(webTot(d)):''}</b>
+     <div class="row"><button class="btn sm ghost" onclick="webRefuser('${w.id}')">❌ ${t('Refuser')}</button>${d.tel?`<button class="btn sm alt" onclick="openWA('${esc(d.tel)}','Bonjour ${esc((d.nom||'').replace(/'/g,' '))}, ')">WhatsApp</button>`:''}<button class="btn sm" style="background:#7B3FA0" onclick="webConfirmer('${w.id}')">✅ ${resa?t('Confirmer'):t('Confirmer')+' → '+t('Cuisine')}</button></div></div>
+   </article>`}).join('')}</div>`}
+async function webMaj(id,statut,n){if(DEMO||!SB)return true;try{const r=await SB.from('resto_web_orders').update({statut,commande:n||null}).eq('id',id);if(r.error)throw r.error;return true}catch(e){toast('Pas de connexion. Réessayez.');return false}}
+async function webConfirmer(id){const w=WEB.find(x=>x.id===id);if(!w)return;const d=w.data||{},I=(d.items||[]).filter(i=>i.q>0);
+  let n=null;
+  if(I.length){n=Math.max(0,...todayOrders().map(o=>o.n))+1;
+    const items=I.map(i=>{const p=S.plats.find(x=>x.id===i.pid);return{pid:i.pid,nom:p?p.nom:i.nom,prix:+i.prix||0,q:+i.q||1}});
+    const notes=[d.heure?'Heure : '+d.heure:'',d.note||''].filter(Boolean).join(' · ');
+    const typ=d.mode==='livraison'?'livraison':d.mode==='emporter'?'emporter':'place';
+    const o={id:uid(),n,date:new Date().toISOString(),type:typ,table:'',client:{nom:d.nom||'',tel:d.tel||'',quartier:[d.zone,d.adr].filter(Boolean).join(' · ')},frais:typ==='livraison'?+d.frais||0:0,items,note:notes,statut:'cuisine',paye:false,par:'En ligne',parId:'web',web:true};
+    if(!await webMaj(id,'accepte',n))return;
+    S.orders.push(o);save()}
+  else if(!await webMaj(id,'accepte'))return;
+  WEB=WEB.filter(x=>x.id!==id);render();
+  const msg=I.length?`Bonjour ${d.nom||''} 👋\nVotre commande est confirmée ✅ (n°${n}).\n${d.mode==='livraison'?'Elle part en cuisine, on vous la livre bientôt 🛵':d.mode==='emporter'?'Elle part en cuisine. On vous prévient quand c\'est prêt.':'Elle part en cuisine.'}\nMerci ! ${S.set.nom||''}`:`Bonjour ${d.nom||''} 👋\nVotre réservation est confirmée ✅ : ${(d.date||'').split('-').reverse().join('/')} à ${d.heure||''}, ${+d.pers||1} personne(s).\nÀ bientôt ! ${S.set.nom||''}`;
+  if(d.tel)toastAct(I.length?`n°${n} → ${t('Cuisine')}`:'Réservation confirmée','WhatsApp client',()=>openWA(d.tel,msg));else toast(I.length?`n°${n} → ${t('Cuisine')}`:'Réservation confirmée')}
+async function webRefuser(id){const w=WEB.find(x=>x.id===id);if(!w)return;if(!confirm('Refuser cette commande en ligne ?'))return;
+  if(!await webMaj(id,'refuse'))return;const d=w.data||{};WEB=WEB.filter(x=>x.id!==id);render();
+  if(d.tel)toastAct('Commande refusée','Prévenir sur WhatsApp',()=>openWA(d.tel,`Bonjour ${d.nom||''}, désolé, nous ne pouvons pas prendre votre commande pour le moment. ${S.set.nom||''}`))}
 function softRender(){const a=document.activeElement;if(MODE!=='app')return;if(document.getElementById('ovWrap').innerHTML||(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))){dirtyRender=true;return}render()}
 async function fetchAb(){if(DEMO||!SB||!USER)return;try{let r=await SB.from('resto_abonnements').select('*').eq('user_id',USER.id).maybeSingle();
   if(!r.error&&!r.data){const e=new Date(Date.now()+7*864e5);
@@ -529,8 +584,9 @@ function render(){
   if(!T.some(([k])=>k===tab)&&!(tab==='cuisine'&&isP()&&has('cuisine')))tab=T[0][0];
   nav.hidden=T.length<2;
   nav.style.gridTemplateColumns=`repeat(${T.length},1fr)`;
+  if(DEMO&&webSeen===null)fetchWeb();
   const enc=todayOrders().filter(o=>!o.annule&&o.statut==='cuisine').length;
-  nav.innerHTML=T.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${IC[k]}${t(l)}${(k==='commandes'||k==='cuisine')&&enc?` (${enc})`:''}</button>`).join('');
+  nav.innerHTML=T.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${IC[k]}${t(l)}${(k==='commandes'||k==='cuisine')&&enc?` (${enc})`:''}${k==='commandes'&&webVoit()&&WEB.length?` <span class="wbadge">🌐 ${WEB.length}</span>`:''}</button>`).join('');
   const V={caisse:vCaisse,commandes:vCommandes,menu:vMenu,argent:vArgent,plus:vPlus,cuisine:vCuisine}[tab];
   document.body.classList.toggle('nonav',T.length<2);
   document.getElementById('view').innerHTML=(DEMO?demoBar():'')+abBanner()+(S.exemple&&isP()?bannerEx():'')+V();
@@ -804,9 +860,10 @@ function vCommandes(){
   const ST={cuisine:['t-cuisine','En cuisine'],prete:['t-prete','Prête'],servie:['t-servie','Servie']};
   return `<div class="chips">${isP()&&has('cuisine')?`<button class="chip" onclick="go('cuisine')">${t('Écran cuisine')}</button>`:''}<button class="chip ${cmdF==='encours'?'on':''}" onclick="cmdF='encours';render()">${t('En cours')}</button><button class="chip ${cmdF==='tout'?'on':''}" onclick="cmdF='tout';render()">${t('Toutes aujourd\'hui')} (${all.length})</button></div>
   <div class="oleg">${Object.entries(EC).map(([k,[c,l]])=>`<button style="--oc:${c}" class="${cmdF===k||cmdF==='tout'||(cmdF==='encours'&&k!=='fini')?'':'dim'}" onclick="cmdF=cmdF==='${k}'?'tout':'${k}';render()">${l} · ${nb[k]}</button>`).join('')}</div>
+  ${vWeb()}
   <div class="olist">${L.map(o=>{const s=ST[o.statut];const e=etat(o);const isNew=Date.now()-new Date(o.date).getTime()<120000&&e==='cuisine';const nx=o.statut==='cuisine'?['prete','Prête']:o.statut==='prete'?['servie',o.type==='livraison'?'Livrée':'Servie']:null;
    return `<article class="order s-${e} ${isNew?'new':''}">
-    <div class="row between"><span class="row" style="gap:10px"><span class="num">n°${o.n}</span><span class="ostat">${EC[e][1]}</span>${isNew?'<span class="tag t-du">NOUVEAU</span>':''}</span><span class="muted">${new Date(o.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
+    <div class="row between"><span class="row" style="gap:10px"><span class="num">n°${o.n}</span><span class="ostat">${EC[e][1]}</span>${isNew?'<span class="tag t-du">NOUVEAU</span>':''}${o.web?'<span class="tag" style="background:#7B3FA0;color:#fff">🌐 En ligne</span>':''}</span><span class="muted">${new Date(o.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
     <div class="row"><span class="tag t-neutre">${t(TY[o.type])}${o.table?' · '+t('Table')+' '+esc(o.table):''}</span>${o.statut==='servie'?`<span class="tag t-servie">${t(o.type==='livraison'?'Livrée':'Servie')}</span>`:''}${o.paye?`<span class="tag t-paye">${o.mode==='credit'?t('Dette'):o.mode==='abonne'?t('Abonnement'):t('Payée')+' · '+mName(o.mode)}</span>`:`<span class="tag t-du">${o.paiements&&o.paiements.length?t('Déjà payé')+' '+F(sum(o.paiements))+' · '+t('Reste')+' '+F(tot(o)-sum(o.paiements)):t('À payer')}</span>`}</div>
     ${o.client&&o.client.nom?`<div><b>${esc(o.client.nom)}</b> ${esc(o.client.tel||'')} ${o.client.quartier?'· '+esc(o.client.quartier):''}</div>`:''}
     ${o.type==='livraison'?`<div class="row"><span>🛵 ${o.livreur?esc(o.livreur)+(o.livExterne?' (externe)':''):`<span class="muted">${t('Pas encore de livreur')}</span>`}</span>${me.role!=='serveur'?`<button class="btn sm ghost" onclick="livModal('${o.id}')">${o.livreur?t('Changer'):t('Choisir')}</button>${o.livreurTel?`<button class="btn sm alt" onclick="waLivreur('${o.id}')">${t('WhatsApp livreur')}</button>`:''}`:''}</div>`:''}

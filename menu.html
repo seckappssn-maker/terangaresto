@@ -93,6 +93,9 @@ main{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:8px 24px}
 .x{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;min-height:44px;padding:8px 14px;font-weight:800;cursor:pointer}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .line{display:flex;align-items:center;gap:10px}
+.stbox{border-left:6px solid var(--sc);background:color-mix(in srgb,var(--sc) 12%,var(--surface));border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;text-align:left}
+.stbox b{color:var(--sc)}
+.stmain{max-width:860px;margin:12px auto 0;padding:0 16px}
 .line .g{flex:1;min-width:0}
 .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
 .mode{border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 10px;font-weight:800;cursor:pointer;min-height:56px}
@@ -146,7 +149,8 @@ const WO={
  'Choisissez au moins un plat.':'Tànnal benn lekk.','Choisissez la date et l\'heure.':'Tànnal bes ak waxtu.','Réserver une table':'Jàppal taabal',
  'Cette page n\'est pas disponible pour le moment.':'Xët wii jëfewul leegi.','Lien introuvable.':'Lien bi amul.','Pas de connexion internet.':'Amul internet.','Réessayer':'Jéemaatal',
  'Commande envoyée ? Le restaurant va vous confirmer sur WhatsApp.':'Yónne nga komand bi ? Restoraan bi dina la dëggal ci WhatsApp.','Nouvelle commande':'Komand bu bees',
- 'Texte plus grand':'Bind bu gën a mag','Texte normal':'Bind bu yem'
+ 'Texte plus grand':'Bind bu gën a mag','Texte normal':'Bind bu yem','Écrivez votre téléphone.':'Bindal sa telefon.','Envoyée au restaurant':'Yónne nañu ko restoraan bi',
+ 'Commande confirmée !':'Komand bi dëggal nañu ko !','Le restaurant prépare votre commande.':'Restoraan bi mungiy togg sa komand.','En attente de confirmation… Cette page se met à jour toute seule.':'Ñungiy xaar ñu dëggal… Xët wii dina soppiku boppam.'
 };
 let LANG=store('trm.lang')||'fr';
 const t=s=>LANG==='wo'&&WO[s]?WO[s]:s;
@@ -230,7 +234,8 @@ function render(){const A=$('app');
     A.innerHTML=`<div class="state"><h1>${esc(m)}</h1>${STATE==='net'?`<button class="add" onclick="STATE='load';render();boot()">${t('Réessayer')}</button>`:'<div class="muted">Vérifiez le lien avec le restaurant.</div>'}</div>`;return}
   const S=sections(),n=nItems();if(!catOn&&S[0])catOn=S[0].id;
   document.title=(R.nom||'Restaurant')+' · Menu';
-  A.innerHTML=`${R.demo?`<div class="demo">Exemple de page client : menu et photos d'exemple</div>`:''}
+  const showSt=LAST&&!IS_DEMO&&['nouveau','envoi','accepte','refuse'].includes(LAST.st)&&Date.now()-LAST.at<3*3600000;
+  A.innerHTML=`${R.demo?`<div class="demo">Exemple de page client : menu et photos d'exemple</div>`:''}${showSt?`<div class="stmain">${statutBox()}</div>`:''}
   <header class="hero"><div class="hin">
    <div class="tools"><button class="tbtn" onclick="setBig()" aria-pressed="${BIG}" aria-label="${BIG?t('Texte normal'):t('Texte plus grand')}">${BIG?'A−':'A+'}</button><button class="tbtn" onclick="setLang()">${LANG==='wo'?'Français':'Wolof'}</button></div>
    <h1>${esc(R.nom||'Restaurant')}</h1>${R.texte?`<p>${esc(R.texte)}</p>`:''}
@@ -276,7 +281,7 @@ function drawOrder(){const L=lines(),sv=services(),Z=zones(),sh=$('sheet');if(!s
   <div id="oerr" class="err" role="alert"></div>
   <a id="sendA" class="send" href="#" target="_blank" rel="noopener" onclick="return trySend(event)"><svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.6-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg><span id="sendT"></span></a>
   <div class="muted" style="text-align:center">${t('Le restaurant vous répond sur WhatsApp pour confirmer.')}</div>
-  ${sent?`<div class="box" style="text-align:center"><b>${t('Commande envoyée ? Le restaurant va vous confirmer sur WhatsApp.')}</b><button class="add" onclick="cart={};sent=false;saveCart();closeOrder()">${t('Nouvelle commande')}</button></div>`:''}`;
+  ${sent?`<div class="box" style="text-align:center">${statutBox()}<button class="add" onclick="cart={};sent=false;saveCart();closeOrder()">${t('Nouvelle commande')}</button></div>`:''}`;
   upd()}
 function problem(){const L=lines();
   if(!mode)return t('Comment voulez-vous votre repas ?');
@@ -285,6 +290,7 @@ function problem(){const L=lines();
   if(mode==='livraison'&&o.adr.trim().length<3)return t('Écrivez l\'adresse de livraison.');
   if(mode==='place'&&(!o.date||!o.heure))return t('Choisissez la date et l\'heure.');
   if(o.nom.trim().length<2)return t('Écrivez votre nom.');
+  if(mode==='livraison'&&o.tel.replace(/\D/g,'').length<7)return t('Écrivez votre téléphone.');
   return ''}
 function message(){const L=lines(),M={livraison:'Livraison',emporter:'À emporter',place:'Sur place'}[mode];const z=zones().find(z=>z.nom===o.zone);
   const fd=d=>d?d.split('-').reverse().join('/'):'';
@@ -305,9 +311,30 @@ function upd(){const a=$('sendA'),tx=$('sendT');if(!a)return;const L=lines();
   a.href=p?'#':'https://wa.me/'+waNum(R.whatsapp)+'?text='+encodeURIComponent(message())}
 function trySend(e){rd();upd();const p=problem();if(p){e.preventDefault();$('oerr').textContent=p;return false}
   if(waNum(R.whatsapp).length<11){e.preventDefault();$('oerr').textContent='Numéro WhatsApp du restaurant manquant.';return false}
-  $('oerr').textContent='';setTimeout(()=>{sent=true;drawOrder()},600);return true}
+  $('oerr').textContent='';envoyerCaisse();setTimeout(()=>{sent=true;drawOrder()},600);return true}
+/* ---------- Envoi direct dans la caisse du restaurant ---------- */
+let LAST=store('trm.last.'+(CODE||'DEMO')),stT=null;
+function newId(){try{return crypto.randomUUID()}catch(e){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})}}
+function envoyerCaisse(){const L=lines(),z=zones().find(z=>z.nom===o.zone);
+  const d={mode,nom:o.nom.trim(),tel:o.tel.trim(),zone:mode==='livraison'&&z?z.nom:'',adr:mode==='livraison'?o.adr.trim():'',heure:o.heure||'',date:mode==='place'?o.date:'',pers:mode==='place'?Math.max(1,+o.pers||1):0,
+    frais:mode==='livraison'?frais():0,note:o.note.trim(),items:L.map(l=>({pid:l.p.id,nom:l.p.nom,prix:l.p.prix,q:l.q}))};
+  const id=newId();LAST={id,at:Date.now(),st:IS_DEMO?'demo':'envoi',n:null};store('trm.last.'+(CODE||'DEMO'),LAST);
+  if(IS_DEMO)return;
+  try{fetch(SUPA_URL+'/rest/v1/rpc/resto_web_order',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',apikey:SUPA_KEY},body:JSON.stringify({p_code:CODE,p_id:id,p_data:d})})
+    .then(r=>{LAST.st=r.ok?'nouveau':'whatsapp';store('trm.last.'+CODE,LAST);if(sent)drawOrder();if(r.ok)suivre()}).catch(()=>{})}catch(e){}}
+async function suivre(){clearTimeout(stT);if(!LAST||IS_DEMO||!LAST.id)return;if(Date.now()-LAST.at>6*3600000)return;
+  try{const r=await fetch(SUPA_URL+'/rest/v1/rpc/resto_web_order_statut',{method:'POST',headers:{'Content-Type':'application/json',apikey:SUPA_KEY},body:JSON.stringify({p_id:LAST.id})});
+    if(r.ok){const j=await r.json();if(j&&j.statut){const ch=j.statut!==LAST.st;LAST.st=j.statut;LAST.n=j.commande||null;store('trm.last.'+CODE,LAST);if(ch){if(sent)drawOrder();else if(STATE==='ok'&&!$('sheet'))render()}}}}catch(e){}
+  if(LAST.st==='nouveau'||LAST.st==='envoi')stT=setTimeout(suivre,8000)}
+function statutBox(){const st=LAST&&LAST.st;
+  if(st==='demo')return `<div class="stbox" style="--sc:#7B3FA0"><b>🌐 ${t('Envoyée au restaurant')}</b><div>${t('Exemple : sur une vraie page, la commande arrive directement dans la caisse du restaurant.')}</div></div>`;
+  if(st==='accepte')return `<div class="stbox" style="--sc:#2E7D4F"><b>✅ ${t('Commande confirmée !')}${LAST.n?' n°'+LAST.n:''}</b><div>${t('Le restaurant prépare votre commande.')}</div></div>`;
+  if(st==='refuse')return `<div class="stbox" style="--sc:#C62828"><b>❌ ${t('Le restaurant ne peut pas prendre la commande pour le moment.')}</b><div>${t('Écrivez-lui sur WhatsApp pour en savoir plus.')}</div></div>`;
+  if(st==='nouveau'||st==='envoi')return `<div class="stbox" style="--sc:#E07B0E"><b>⏳ ${t('Envoyée au restaurant')}</b><div>${t('En attente de confirmation… Cette page se met à jour toute seule.')}</div></div>`;
+  return `<b>${t('Commande envoyée ? Le restaurant va vous confirmer sur WhatsApp.')}</b>`}
 
 boot();
+if(LAST&&LAST.id&&(LAST.st==='nouveau'||LAST.st==='envoi'))suivre();
 </script>
 
 </body>
