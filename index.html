@@ -148,7 +148,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--bissap);border-c
 .pret{background:#1E7FD8;color:#fff;border-radius:18px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 12px 34px rgba(0,0,0,.3);animation:pin .35s ease-out}
 .pret .big{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.15}
 .pret .sm{font-size:15px;opacity:.95;font-weight:600}
-.pret button{margin-left:auto;border:0;background:#fff;color:#1E7FD8;font-weight:800;font-size:17px;border-radius:12px;padding:12px 18px;cursor:pointer;flex:none}
+.pret button{margin-left:auto;border:0;background:#fff;font-weight:800;font-size:17px;border-radius:12px;padding:12px 18px;cursor:pointer;flex:none}
 @keyframes pin{from{transform:translateY(-30px);opacity:0}}
 .order .num{font-family:var(--f-display);font-weight:800;font-size:20px}
 .stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
@@ -362,7 +362,8 @@ function setLocal(col,id,data){if(col==='set'){S.set={...data,lang:S.set.lang,fo
 function removeLocal(col,id){if(col==='page'){delete S.page;return}if(S[col])S[col]=S[col].filter(x=>x.id!==id)}
 function applyRow(row){const k=row.col+'|'+row.id,cur=rowsOf(),local=cur[k];
   if(local&&JSON.stringify(local)!==snap[k])return false;
-  if(row.col==='orders'&&!row.deleted&&row.data&&row.data.statut==='prete'&&local&&local.statut==='cuisine'&&!row.data.annule)pretQueue.push(row.data);
+  if(row.col==='orders'&&!row.deleted&&row.data&&!row.data.annule){if(row.data.statut==='prete'&&local&&local.statut==='cuisine')pretQueue.push(row.data);
+   else if(row.data.statut==='cuisine'&&(!local||local.statut!=='cuisine'))cuisQueue.push([row.data,!!local])}
   if(row.deleted){delete snap[k];if(!local)return false;removeLocal(row.col,row.id);return true}
   if(!row.data||typeof row.data!=='object')return false;
   if(row.col!=='set'&&row.col!=='page'&&!row.data.id)row.data.id=row.id;
@@ -386,25 +387,33 @@ async function pull(full){if(DEMO||!SB||!USER)return false;let changed=false,max
 async function sync(full){if(DEMO||!SB||!USER||syncing)return;syncing=true;let ch=false;
   try{if(full){ch=await pull(true);await push()}else{await push();ch=await pull(false)}if(syncSt!=='err')setSyncSt('ok')}catch(e){setSyncSt('err',e)}finally{syncing=false}
   if(ch||tab==='cuisine')softRender();
-  if(pretQueue.length){const q=pretQueue.splice(0);q.forEach(annoncePrete)}}
+  if(full){pretQueue=[];cuisQueue=[]}
+  if(pretQueue.length){const q=pretQueue.splice(0);q.forEach(annoncePrete)}
+  if(cuisQueue.length){const q=cuisQueue.splice(0);q.forEach(([o,aj])=>annonceCuisine(o,aj))}}
 /* ---------- Annonce « commande prête » (caisse / serveur) ---------- */
-let pretQueue=[];
+let pretQueue=[],cuisQueue=[];
 let voixOn=(()=>{try{return localStorage.getItem('terangaResto_voix')!=='off'}catch(e){return true}})();
 let audioCtx=null;
 function unlockAudio(){try{if(!audioCtx){const A=window.AudioContext||window.webkitAudioContext;if(A)audioCtx=new A()}if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();if(window.speechSynthesis&&!unlockAudio.done){const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);unlockAudio.done=true}}catch(e){}}
 document.addEventListener('pointerdown',unlockAudio,{passive:true});
 function toggleVoix(){voixOn=!voixOn;try{localStorage.setItem('terangaResto_voix',voixOn?'on':'off')}catch(e){}unlockAudio();document.getElementById('voixBtn').textContent=voixOn?'🔊':'🔇';
-  toast(voixOn?'Voix activée : la caisse annonce les commandes prêtes':'Voix coupée (le message s\'affiche quand même)');if(voixOn)parler('La voix est activée')}
+  toast(voixOn?'Voix activée : les commandes sont annoncées à voix haute':'Voix coupée (le message s\'affiche quand même)');if(voixOn)parler('La voix est activée')}
 function ding(){try{unlockAudio();if(!audioCtx)return;const t0=audioCtx.currentTime;[[880,0],[1175,.18]].forEach(([f,d])=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t0+d);g.gain.exponentialRampToValueAtTime(.4,t0+d+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+d+.45);o.connect(g).connect(audioCtx.destination);o.start(t0+d);o.stop(t0+d+.5)})}catch(e){}}
 function parler(txt){try{if(!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='fr-FR';const v=speechSynthesis.getVoices().find(x=>/^fr/i.test(x.lang));if(v)u.voice=v;u.rate=.95;speechSynthesis.speak(u)}catch(e){}}
+function bandeau(html,col){const w=document.getElementById('pretWrap');if(!w.firstChild){w.innerHTML='<div class="pretbox"></div>'}
+  const box=w.firstChild,el=document.createElement('div');el.className='pret';el.style.background=col;el.setAttribute('role','alert');
+  el.innerHTML=html+'<button>OK</button>';el.querySelector('button').style.color=col;
+  const close=()=>{el.remove();if(!box.children.length)w.innerHTML=''};el.querySelector('button').onclick=close;setTimeout(close,60000);box.prepend(el);ding()}
+function ouTxt(o){return o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison':'À emporter'}
+function annonceCuisine(o,ajout){if(!me)return;const estCuisine=me.role==='cuisine'||tab==='cuisine';if(!estCuisine)return;
+  if(!ajout&&Date.now()-new Date(o.date).getTime()>10*60000)return;
+  const KI=o.cuisineItems||o.items;
+  bandeau(`<div><div class="big">🔥 ${ajout?t('Ajout')+' · n°'+o.n:'Nouvelle commande n°'+o.n}</div><div class="sm">${esc(ouTxt(o))}${o.par?' · '+esc(o.par):''} · ${KI.map(i=>i.q+' × '+esc(i.nom)).join(', ')}</div></div>`,'#E07B0E');
+  if(voixOn)setTimeout(()=>parler((ajout?'Ajout pour la commande numéro ':'Nouvelle commande, numéro ')+o.n+'. '+ouTxt(o)),700)}
 function annoncePrete(o){if(!me||me.role==='cuisine')return;if(me.role==='serveur'&&o.parId!==me.id)return;
   if(o.preteLe&&Date.now()-new Date(o.preteLe).getTime()>10*60000)return;
   const ou=o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison'+(o.client&&o.client.quartier?' · '+o.client.quartier:''):'À emporter'+(o.client&&o.client.nom?' · '+o.client.nom:'');
-  const w=document.getElementById('pretWrap');if(!w.firstChild){w.innerHTML='<div class="pretbox"></div>'}
-  const box=w.firstChild,el=document.createElement('div');el.className='pret';el.setAttribute('role','alert');
-  el.innerHTML=`<div><div class="big">🔔 n°${o.n} ${t('Prête')} !</div><div class="sm">${esc(ou)} · ${o.items.map(i=>i.q+' × '+esc(i.nom)).join(', ')}</div></div><button>OK</button>`;
-  const close=()=>{el.remove();if(!box.children.length)w.innerHTML=''};el.querySelector('button').onclick=close;setTimeout(close,60000);
-  box.prepend(el);ding();
+  bandeau(`<div><div class="big">🔔 n°${o.n} ${t('Prête')} !</div><div class="sm">${esc(ou)} · ${o.items.map(i=>i.q+' × '+esc(i.nom)).join(', ')}</div></div>`,'#1E7FD8');
   if(voixOn)setTimeout(()=>parler(`Commande numéro ${o.n} prête. `+(o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison':'À emporter')),700)}
 function softRender(){const a=document.activeElement;if(MODE!=='app')return;if(document.getElementById('ovWrap').innerHTML||(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))){dirtyRender=true;return}render()}
 async function fetchAb(){if(DEMO||!SB||!USER)return;try{let r=await SB.from('resto_abonnements').select('*').eq('user_id',USER.id).maybeSingle();
@@ -510,7 +519,7 @@ function render(){
   document.getElementById('hDate').textContent=(S.set.lang==='wo'?JOURS_WO:JOURS)[d.getDay()]+' '+d.getDate()+'/'+pad(d.getMonth()+1);
   const w=document.getElementById('who');w.hidden=!me;if(me)w.textContent=me.role==='patron'?t('Patron'):me.nom+' · '+t(ROLES[me.role]);
   document.getElementById('langBtn').textContent=S.set.lang==='wo'?'Français':'Wolof';
-  document.getElementById('outBtn').hidden=!me;{const vb=document.getElementById('voixBtn');vb.hidden=!me||me.role==='cuisine';vb.textContent=voixOn?'🔊':'🔇'}document.getElementById('outBtn').textContent=t('Sortir');
+  document.getElementById('outBtn').hidden=!me;{const vb=document.getElementById('voixBtn');vb.hidden=!me;vb.textContent=voixOn?'🔊':'🔇'}document.getElementById('outBtn').textContent=t('Sortir');
   const nav=document.getElementById('nav');
   document.getElementById('syncDot').hidden=DEMO||MODE!=='app';setSyncSt(syncSt||'ok');
   if(MODE==='boot'||MODE==='account'){nav.hidden=true;document.body.classList.add('nonav');document.getElementById('outBtn').hidden=true;document.getElementById('view').innerHTML=MODE==='boot'?vBoot():vAccount();return}
