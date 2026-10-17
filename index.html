@@ -131,6 +131,19 @@ input,select,textarea{border:1.5px solid var(--line);border-radius:10px;padding:
 input:focus,select:focus,textarea:focus{outline:2px solid var(--bissap);border-color:transparent}
 .total{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--f-display);font-weight:800;font-size:26px}
 .order{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--surface);display:flex;flex-direction:column;gap:8px}
+.order{border-left:8px solid var(--oc,var(--line))}
+.order.s-cuisine{--oc:#E07B0E;background:color-mix(in srgb,#E07B0E 9%,var(--surface))}
+.order.s-prete{--oc:#1E7FD8;background:color-mix(in srgb,#1E7FD8 9%,var(--surface))}
+.order.s-apayer{--oc:#C62828;background:color-mix(in srgb,#C62828 8%,var(--surface))}
+.order.s-fini{--oc:#2E7D4F;background:color-mix(in srgb,#2E7D4F 7%,var(--surface));opacity:.78}
+.ostat{display:inline-flex;align-items:center;gap:6px;background:var(--oc);color:#fff;font-weight:800;font-size:15px;border-radius:10px;padding:5px 12px}
+.order.new{box-shadow:0 0 0 3px var(--oc);animation:onew 1.2s ease-in-out 3}
+@keyframes onew{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--oc) 35%,transparent)}}
+.olist{display:flex;flex-direction:column;gap:10px}
+@media (min-width:900px){.olist{display:grid;grid-template-columns:1fr 1fr;align-items:start}}
+.oleg{display:flex;flex-wrap:wrap;gap:8px}
+.oleg button{border:0;border-radius:999px;padding:7px 12px;font-weight:800;font-size:14px;color:#fff;background:var(--oc);cursor:pointer;opacity:.9}
+.oleg button.dim{opacity:.35}
 .order .num{font-family:var(--f-display);font-weight:800;font-size:20px}
 .stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 .stat div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -746,15 +759,18 @@ function confirmPay(){
 /* ---------- Commandes ---------- */
 function vCommandes(){
   const all=todayOrders().filter(o=>!o.annule&&(me.role!=='serveur'||o.parId===me.id)).sort((a,b)=>b.n-a.n);
-  const rk={prete:0,cuisine:1,servie:2};
-  const L=(cmdF==='encours'?all.filter(o=>o.statut!=='servie'||!o.paye):all).slice().sort((a,b)=>rk[a.statut]-rk[b.statut]||b.n-a.n);
+  const etat=o=>o.statut==='cuisine'?'cuisine':o.statut==='prete'?'prete':o.paye?'fini':'apayer';
+  const EC={cuisine:['#E07B0E','🔥 '+t('En cuisine')],prete:['#1E7FD8','✅ '+t('Prête')],apayer:['#C62828','💰 '+t('À payer')],fini:['#2E7D4F','✔ '+t('Payée')]};
+  const nb={cuisine:0,prete:0,apayer:0,fini:0};all.forEach(o=>nb[etat(o)]++);
+  let L=(cmdF==='encours'?all.filter(o=>etat(o)!=='fini'):cmdF in EC?all.filter(o=>etat(o)===cmdF):all).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)||b.n-a.n);
   const TY={place:'Sur place',emporter:'À emporter',livraison:'Livraison'};
   const ST={cuisine:['t-cuisine','En cuisine'],prete:['t-prete','Prête'],servie:['t-servie','Servie']};
   return `<div class="chips">${isP()&&has('cuisine')?`<button class="chip" onclick="go('cuisine')">${t('Écran cuisine')}</button>`:''}<button class="chip ${cmdF==='encours'?'on':''}" onclick="cmdF='encours';render()">${t('En cours')}</button><button class="chip ${cmdF==='tout'?'on':''}" onclick="cmdF='tout';render()">${t('Toutes aujourd\'hui')} (${all.length})</button></div>
-  ${L.map(o=>{const s=ST[o.statut];const nx=o.statut==='cuisine'?['prete','Prête']:o.statut==='prete'?['servie',o.type==='livraison'?'Livrée':'Servie']:null;
-   return `<article class="order">
-    <div class="row between"><span class="num">n°${o.n}</span><span class="muted">${new Date(o.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
-    <div class="row"><span class="tag t-neutre">${t(TY[o.type])}${o.table?' · '+t('Table')+' '+esc(o.table):''}</span><span class="tag ${s[0]}">${t(s[1])}</span>${o.paye?`<span class="tag t-paye">${o.mode==='credit'?t('Dette'):o.mode==='abonne'?t('Abonnement'):t('Payée')+' · '+mName(o.mode)}</span>`:`<span class="tag t-du">${o.paiements&&o.paiements.length?t('Déjà payé')+' '+F(sum(o.paiements))+' · '+t('Reste')+' '+F(tot(o)-sum(o.paiements)):t('À payer')}</span>`}</div>
+  <div class="oleg">${Object.entries(EC).map(([k,[c,l]])=>`<button style="--oc:${c}" class="${cmdF===k||cmdF==='tout'||(cmdF==='encours'&&k!=='fini')?'':'dim'}" onclick="cmdF=cmdF==='${k}'?'tout':'${k}';render()">${l} · ${nb[k]}</button>`).join('')}</div>
+  <div class="olist">${L.map(o=>{const s=ST[o.statut];const e=etat(o);const isNew=Date.now()-new Date(o.date).getTime()<120000&&e==='cuisine';const nx=o.statut==='cuisine'?['prete','Prête']:o.statut==='prete'?['servie',o.type==='livraison'?'Livrée':'Servie']:null;
+   return `<article class="order s-${e} ${isNew?'new':''}">
+    <div class="row between"><span class="row" style="gap:10px"><span class="num">n°${o.n}</span><span class="ostat">${EC[e][1]}</span>${isNew?'<span class="tag t-du">NOUVEAU</span>':''}</span><span class="muted">${new Date(o.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
+    <div class="row"><span class="tag t-neutre">${t(TY[o.type])}${o.table?' · '+t('Table')+' '+esc(o.table):''}</span>${o.statut==='servie'?`<span class="tag t-servie">${t(o.type==='livraison'?'Livrée':'Servie')}</span>`:''}${o.paye?`<span class="tag t-paye">${o.mode==='credit'?t('Dette'):o.mode==='abonne'?t('Abonnement'):t('Payée')+' · '+mName(o.mode)}</span>`:`<span class="tag t-du">${o.paiements&&o.paiements.length?t('Déjà payé')+' '+F(sum(o.paiements))+' · '+t('Reste')+' '+F(tot(o)-sum(o.paiements)):t('À payer')}</span>`}</div>
     ${o.client&&o.client.nom?`<div><b>${esc(o.client.nom)}</b> ${esc(o.client.tel||'')} ${o.client.quartier?'· '+esc(o.client.quartier):''}</div>`:''}
     ${o.type==='livraison'?`<div class="row"><span>🛵 ${o.livreur?esc(o.livreur)+(o.livExterne?' (externe)':''):`<span class="muted">${t('Pas encore de livreur')}</span>`}</span>${me.role!=='serveur'?`<button class="btn sm ghost" onclick="livModal('${o.id}')">${o.livreur?t('Changer'):t('Choisir')}</button>${o.livreurTel?`<button class="btn sm alt" onclick="waLivreur('${o.id}')">${t('WhatsApp livreur')}</button>`:''}`:''}</div>`:''}
     ${o.par&&isP()?`<div class="muted" style="font-size:13px">Prise par ${esc(o.par)}${o.encPar?' · encaissée par '+esc(o.encPar):''}</div>`:''}
@@ -763,7 +779,7 @@ function vCommandes(){
     ${o.note?`<div><b>Note :</b> ${esc(o.note)}</div>`:''}
     <div class="row between"><b style="font-size:20px">${F(tot(o))}</b>
       <div class="row">${!o.paye&&o.type!=='livraison'?`<button class="btn sm alt" onclick="addToOrder('${o.id}')">+ ${t('Ajouter des plats')}</button>`:''}${nx?`<button class="btn sm alt" onclick="setSt('${o.id}','${nx[0]}')">→ ${t(nx[1])}</button>`:''}${o.paye||me.role==='serveur'?'':`<button class="btn sm" onclick="payModal('${o.id}')">${t('Encaisser')}</button>`}${me.role==='serveur'?'':`<button class="btn sm ghost" onclick="orderMenu('${o.id}')" aria-label="Plus d'actions">…</button>`}</div></div>
-   </article>`}).join('')||`<div class="empty">${t('Aucune commande en cours.')}<br><button class="btn" style="margin-top:12px" onclick="go('caisse')">${t('Nouvelle commande')}</button></div>`}`;
+   </article>`}).join('')||`<div class="empty">${t('Aucune commande en cours.')}<br><button class="btn" style="margin-top:12px" onclick="go('caisse')">${t('Nouvelle commande')}</button></div>`}</div>`;
 }
 function kPrete(id){const o=S.orders.find(x=>x.id===id);o.statut='prete';o.preteLe=new Date().toISOString();save();render();toastAct(`n°${o.n} ${t('Prête').toLowerCase()}`,t('Annuler'),()=>{const x=S.orders.find(y=>y.id===id);if(x){x.statut='cuisine';save();render()}})}
 function addToOrder(id){cart=newCart();cart.addTo=id;catF='Rapide';go('caisse')}
