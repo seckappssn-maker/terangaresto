@@ -49,6 +49,12 @@ h1,h2,h3{font-family:var(--f-d);margin:0;text-wrap:balance}
 .hero h1{font-size:calc(var(--fs)*2.2);line-height:1.05;letter-spacing:-.01em}
 .hero p{margin:0;max-width:60ch;color:#E6F3FA}
 .chipsI{display:flex;flex-wrap:wrap;gap:8px}
+.hhead{display:flex;gap:14px;align-items:center}.hhead>div{min-width:0}
+.rlogo{width:70px;height:70px;flex-shrink:0;border-radius:18px;object-fit:contain;background:#fff;border:2px solid rgba(255,255,255,.35)}
+.vit{max-width:860px;margin:14px auto 0;padding-inline:16px}
+.slides{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:18px;scrollbar-width:none}.slides::-webkit-scrollbar{display:none}
+.slides img{flex:0 0 100%;width:100%;aspect-ratio:16/9;object-fit:cover;scroll-snap-align:center;background:#eee}
+.sdots{display:flex;justify-content:center;gap:6px;margin-top:8px}.sdots i{width:8px;height:8px;border-radius:50%;background:#c9d6de}.sdots i.on{background:var(--blue-deep)}
 .ci{background:rgba(255,255,255,.13);border-radius:999px;padding:6px 12px;font-size:calc(var(--fs)*.85);font-weight:700;color:#fff}
 .demo{background:var(--blue-soft);color:var(--sky-ink);border-bottom:1px solid var(--line);padding:10px 16px;text-align:center;font-weight:700;font-size:calc(var(--fs)*.85)}
 .cats{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
@@ -163,7 +169,8 @@ document.documentElement.classList.toggle('big',BIG);
 function ill(bg,a,b,c){const s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="${bg}"/><ellipse cx="200" cy="170" rx="150" ry="95" fill="#ffffff" opacity=".95"/><ellipse cx="200" cy="165" rx="118" ry="70" fill="${a}"/><circle cx="160" cy="150" r="26" fill="${b}"/><circle cx="235" cy="140" r="20" fill="${c}"/><circle cx="215" cy="185" r="16" fill="${b}"/><circle cx="175" cy="190" r="12" fill="${c}"/></svg>`;return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s)}
 function cup(bg,drink){const s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="${bg}"/><path d="M150 70h100l-12 175h-76z" fill="#ffffff" opacity=".9"/><path d="M156 105h88l-9 135h-70z" fill="${drink}"/></svg>`;return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s)}
 function demoData(){const wd=new Date().getDay();
-  return{ok:true,demo:true,nom:'Chez Awa (exemple)',adresse:'Liberté 6, Dakar',texte:'Cuisine sénégalaise faite maison. Thiéb tous les jours à midi, grillades le soir.',whatsapp:'77 879 00 06',horaires:'Tous les jours, 11h – 23h',
+  return{ok:true,demo:true,nom:'Chez Awa (exemple)',logo:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#fff"/><circle cx="60" cy="60" r="46" fill="#0E4D6E"/><text x="60" y="74" text-anchor="middle" font-family="Georgia,serif" font-size="40" font-weight="700" fill="#fff">CA</text></svg>'),
+   photos:[ill('#0E4D6E','#D9822B','#8C3B1B','#3F7D3A'),ill('#1E7299','#F4F1E6','#E3B23C','#6B8E23')],adresse:'Liberté 6, Dakar',texte:'Cuisine sénégalaise faite maison. Thiéb tous les jours à midi, grillades le soir.',whatsapp:'77 879 00 06',horaires:'Tous les jours, 11h – 23h',
    services:{livraison:true,emporter:true,place:true},zones:[{nom:'Liberté / Sicap',prix:500},{nom:'Parcelles / Grand Yoff',prix:1000},{nom:'Plateau / Almadies',prix:1500}],
    plats:[
     {id:'d1',nom:'Thiéboudienne',prix:2000,cat:'Plats',dispo:true,desc:'Riz au poisson frais, légumes et sauce tomate. Pour 1 personne.',jours:[wd],photos:[ill('#E7C9A0','#D9822B','#8C3B1B','#3F7D3A'),ill('#D7E3C4','#D9822B','#B8562B','#F2C14E'),ill('#F3D9B1','#C96E2A','#3F7D3A','#8C3B1B')]},
@@ -194,6 +201,7 @@ async function boot(){
     const r=await sb.rpc('resto_page_public',{p_code:CODE});if(r.error)throw r.error;
     const d=r.data||{};
     if(!d.ok){R=null;STATE=d.raison==='introuvable'?'notfound':'off';try{localStorage.removeItem('trm.menu.'+CODE)}catch(e){}render();return}
+    if(!('logo' in d)){try{const v=await sb.rpc('resto_vitrine',{p_code:CODE});if(!v.error&&v.data)Object.assign(d,v.data)}catch(e){}}
     R=d;STATE='ok';store('trm.menu.'+CODE,d);
     const ids=new Set(d.plats.map(p=>p.id));for(const k in cart)if(!ids.has(k))delete cart[k];
     render()}
@@ -238,16 +246,27 @@ function render(){const A=$('app');
   A.innerHTML=`${R.demo?`<div class="demo">Exemple de page client : menu et photos d'exemple</div>`:''}${showSt?`<div class="stmain">${statutBox()}</div>`:''}
   <header class="hero"><div class="hin">
    <div class="tools"><button class="tbtn" onclick="setBig()" aria-pressed="${BIG}" aria-label="${BIG?t('Texte normal'):t('Texte plus grand')}">${BIG?'A−':'A+'}</button><button class="tbtn" onclick="setLang()">${LANG==='wo'?'Français':'Wolof'}</button></div>
-   <h1>${esc(R.nom||'Restaurant')}</h1>${R.texte?`<p>${esc(R.texte)}</p>`:''}
+   <div class="hhead">${okImg(R.logo)?`<img class="rlogo" src="${esc(R.logo)}" alt="Logo ${esc(R.nom||'')}">`:''}<div><h1>${esc(R.nom||'Restaurant')}</h1></div></div>${R.texte?`<p>${esc(R.texte)}</p>`:''}
    <div class="chipsI">${R.horaires?`<span class="ci">🕒 ${esc(R.horaires)}</span>`:''}${R.adresse?`<span class="ci">📍 ${esc(R.adresse)}</span>`:''}${services().map(([k,l])=>`<span class="ci">${t(l)}</span>`).join('')}</div>
-  </div></header>
+  </div></header>${vitHTML()}
   <nav class="cats" aria-label="${t('Menu')}"><div class="in">${S.map(s=>`<button class="cat ${catOn===s.id?'on':''}" onclick="goCat('${s.id}')">${esc(s.jour?s.nom:t(s.nom))}</button>`).join('')}</div></nav>
   <main>${S.map(s=>`<section class="sec" id="s_${s.id}"><h2>${esc(s.jour?s.nom:t(s.nom))}</h2><div class="grid">${s.L.map(p=>card(p,s.jour)).join('')}</div></section>`).join('')||'<div class="state"><div class="muted">Le menu arrive bientôt.</div></div>'}
    ${services().some(([k])=>k==='place')?`<div style="padding-top:22px"><button class="add" style="width:100%" onclick="mode='place';openOrder()">${t('Réserver une table')}</button></div>`:''}
    <div class="foot">Page créée avec Teranga Resto · Seck Tech</div></main>
   <div class="bar"><button onclick="openOrder()" ${n?'':'disabled style="opacity:.55;cursor:default"'}><span><span class="n">${n}</span>${t('Ma commande')}</span><span>${F(subTot())}</span></button></div>`;
   if($('ovWrap').innerHTML)drawOrder();
+  vitBind();
 }
+/* ---------- Logo et photos du restaurant ---------- */
+const okImg=u=>typeof u==='string'&&/^(https:|data:image\/)/.test(u);
+let vitCur=0,vitTouch=0,vitTimer=null;
+const vitPh=()=>(R&&Array.isArray(R.photos)?R.photos:[]).filter(okImg).slice(0,3);
+function vitHTML(){const ph=vitPh();if(!ph.length)return'';
+  return `<div class="vit"><div class="slides" id="slides">${ph.map((u,i)=>`<img src="${esc(u)}" alt="Photo ${i+1}" ${i?'loading="lazy"':''}>`).join('')}</div>${ph.length>1?`<div class="sdots">${ph.map((u,i)=>`<i class="${i===vitCur?'on':''}"></i>`).join('')}</div>`:''}</div>`}
+function vitBind(){const sl=$('slides'),n=vitPh().length;if(!sl||n<2)return;if(vitCur>=n)vitCur=0;sl.scrollLeft=vitCur*sl.clientWidth;
+  const mark=()=>{vitCur=Math.round(sl.scrollLeft/sl.clientWidth);document.querySelectorAll('.sdots i').forEach((d,i)=>d.classList.toggle('on',i===vitCur))};
+  sl.addEventListener('scroll',()=>{clearTimeout(sl._t);sl._t=setTimeout(mark,80)});sl.addEventListener('touchstart',()=>{vitTouch=Date.now()},{passive:true});
+  if(!vitTimer)vitTimer=setInterval(()=>{const s=$('slides'),k=vitPh().length;if(!s||k<2||document.hidden||Date.now()-vitTouch<8000)return;s.scrollTo({left:((vitCur+1)%k)*s.clientWidth,behavior:'smooth'})},4500)}
 function goCat(id){catOn=id;document.querySelectorAll('.cat').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick')===`goCat('${id}')`));const e=$('s_'+id);if(e)e.scrollIntoView({behavior:'smooth',block:'start'})}
 function inc(id){const p=plat(id);if(!p||p.dispo===false)return;cart[id]=Math.min(50,(cart[id]||0)+1);sent=false;saveCart();keepScroll(render)}
 function dec(id){cart[id]=Math.max(0,(cart[id]||0)-1);if(!cart[id])delete cart[id];saveCart();keepScroll(render)}

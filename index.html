@@ -1233,6 +1233,16 @@ function vPage(){if(!isP())return'';const P=S.page||pageDefault();if(!pz)pz=(P.z
    <div class="muted" style="font-size:14px">Mettez ce lien dans votre statut WhatsApp, votre bio TikTok, Instagram et Facebook.</div>
   </section>
   <section class="card">
+   <div class="lbl">Logo et photos</div>
+   <div class="muted" style="font-size:14px">En haut de votre page. Si vous ne mettez rien, la page reste comme elle est.</div>
+   <div class="phlist">${okImg(P.logo)?`<div class="phitem"><img src="${esc(P.logo)}" alt="Logo" style="object-fit:contain;background:#fff"><div class="phbtns"><button class="btn sm ghost" onclick="vitDel('logo',0)">Enlever le logo</button></div></div>`:''}
+    ${vitBusy==='logo'?'<div class="phitem phadd"><span>Envoi du logo…</span></div>':`<label class="phitem phadd"><span>${okImg(P.logo)?'Changer le logo':'+ Ajouter mon logo'}</span><input type="file" accept="image/*" onchange="vitPick(this,'logo')" style="display:none"></label>`}</div>
+   ${vitPhotosOk()?`<div class="muted" style="font-size:14px">Photos qui défilent en haut (3 maximum) : votre salle, un plat vedette, une promo…</div>
+   <div class="phlist">${(P.photos||[]).map((u,i)=>`<div class="phitem"><img src="${esc(u)}" alt="Photo ${i+1}"><div class="phbtns">${i?`<button class="btn sm ghost" onclick="vitFirst(${i})">★ 1<sup>re</sup></button>`:''}<button class="btn sm ghost" onclick="vitDel('photo',${i})">Enlever</button></div></div>`).join('')}
+    ${vitBusy==='photo'?'<div class="phitem phadd"><span>Envoi de la photo…</span></div>':(P.photos||[]).length<3?`<label class="phitem phadd"><span>+ Ajouter une photo</span><input type="file" accept="image/*" onchange="vitPick(this,'photo')" style="display:none"></label>`:''}</div>`
+   :'<div class="muted" style="font-size:14px">Avec la formule <b>Pro</b> ou <b>Premium</b>, ajoutez jusqu\'à 3 photos qui défilent en haut de votre page.</div>'}
+  </section>
+  <section class="card">
    <div class="lbl">Présentation</div>
    <label class="f">Petit texte pour les clients<textarea id="pg_txt" rows="3" maxlength="500" placeholder="Ex : Cuisine sénégalaise faite maison. Thiéb tous les jours à midi.">${esc(P.texte||'')}</textarea></label>
    <div class="row"><label class="f">Numéro WhatsApp pour les commandes *<input id="pg_wa" inputmode="tel" value="${esc(P.whatsapp||'')}" placeholder="77 000 00 00"></label>
@@ -1255,6 +1265,29 @@ function vPage(){if(!isP())return'';const P=S.page||pageDefault();if(!pz)pz=(P.z
    <button class="btn ghost" onclick="pz=null;go('menu')">Aller au menu</button>
   </section>
   <button class="btn full" style="min-height:56px" onclick="pageSave()">${t('Enregistrer')}</button>`}
+/* logo et photos de la page client (bucket seck-photos) */
+const VIT_BUCKET='seck-photos';let vitBusy='';
+const okImg=u=>typeof u==='string'&&/^(https:|data:image\/)/.test(u);
+const vitPhotosOk=()=>(S.set.formule||'premium')!=='essentiel';
+function vitShrink(file,W,H,q,fit){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=()=>rej(new Error('img'));im.onload=()=>{
+  const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);
+  const sc=fit==='contain'?Math.min(W/im.width,H/im.height):Math.max(W/im.width,H/im.height),w=im.width*sc,hh=im.height*sc;x.drawImage(im,(W-w)/2,(H-hh)/2,w,hh);
+  const url=c.toDataURL('image/jpeg',q);if(c.toBlob)c.toBlob(b=>res({blob:b,url}),'image/jpeg',q);else res({blob:null,url})};im.src=r.result};r.readAsDataURL(file)})}
+function vitPage(){const P=pageCollect();S.page=P;P.photos=Array.isArray(P.photos)?P.photos:[];return P}
+async function vitPick(inp,kind){const f=inp.files&&inp.files[0];inp.value='';if(!f||vitBusy)return;const P=vitPage();
+  if(kind==='photo'&&P.photos.length>=3)return toast('3 photos maximum');
+  vitBusy=kind;render();
+  try{const logo=kind==='logo',r=await vitShrink(f,logo?320:1000,logo?320:563,logo?.85:.74,logo?'contain':'cover');let url=r.url;
+    if(!DEMO&&SB&&USER){if(!r.blob)throw new Error('blob');const path=USER.id+'/'+uid()+'.jpg';
+      const up=await SB.storage.from(VIT_BUCKET).upload(path,r.blob,{contentType:'image/jpeg',cacheControl:'31536000',upsert:false});if(up.error)throw up.error;
+      url=SB.storage.from(VIT_BUCKET).getPublicUrl(path).data.publicUrl}
+    const Q=S.page;if(logo){vitRm(Q.logo);Q.logo=url}else Q.photos.push(url);save();toast(logo?'Logo ajouté':'Photo ajoutée')}
+  catch(e){const m=String(e&&e.message||e);toast(/img|blob/.test(m)?'Photo illisible, essayez une autre':/fetch|network|Failed/i.test(m)?'Pas de connexion : la photo n\'est pas envoyée':/bucket|not found/i.test(m)?'Photos pas encore activées (étape Supabase)':/row-level|policy|Unauthorized|403/i.test(m)?'Photo refusée':'Photo non envoyée : '+m)}
+  vitBusy='';render()}
+function vitDel(kind,i){const P=vitPage();if(kind==='logo'){vitRm(P.logo);P.logo=''}else{vitRm(P.photos.splice(i,1)[0])}save();render()}
+function vitFirst(i){const P=vitPage();P.photos.unshift(P.photos.splice(i,1)[0]);save();render()}
+function vitRm(u){if(DEMO||!SB||!USER||!u)return;const mark='/object/public/'+VIT_BUCKET+'/';if(!u.includes(mark))return;
+  const p=decodeURIComponent(u.split(mark)[1].split('?')[0]);if(p.startsWith(USER.id+'/'))SB.storage.from(VIT_BUCKET).remove([p]).catch(()=>{})}
 function zRead(){pz=pz.map((z,i)=>({nom:val('z_n_'+i).trim(),prix:Math.max(0,Math.round(+val('z_p_'+i)||0))}))}
 function zAdd(){zRead();pz.push({nom:'',prix:+S.set.fraisLiv||500});render()}
 function zDel(i){zRead();pz.splice(i,1);render()}
