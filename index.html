@@ -1348,6 +1348,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('online',()=>{if(MODE==='app'&&!DEMO)sync(false)});
 document.addEventListener('focusout',()=>setTimeout(()=>{if(dirtyRender){const a=document.activeElement;if(!(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))&&!document.getElementById('ovWrap').innerHTML){dirtyRender=false;render()}}},300));
 cart=newCart();boot();
+if('serviceWorker' in navigator)window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
 </script>
 
 </body>
