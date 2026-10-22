@@ -295,6 +295,10 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const JOURS=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const JOURS_WO=['Dibéer','Altine','Talaata','Àllarba','Alxames','Àjjuma','Gaawu'];
 const CATS=['Plats','Petit-déjeuner','Grillades','Boissons','Desserts'];
+/* Catégories qui ne vont pas en cuisine (choix de chaque restaurant, par défaut tout va en cuisine) */
+function horsC(){return Array.isArray(S.set.horsCuisine)?S.set.horsCuisine:[]}
+function enCuis(it){const p=S.plats.find(x=>x.id===it.pid);return !p||!horsC().includes(p.cat)}
+function kItems(o){return (o.cuisineItems||o.items||[]).filter(enCuis)}
 const CAT_COL={'Rapide':'#13222C','Plats':'#2E7D4F','Petit-déjeuner':'#B4610F','Grillades':'#B3261E','Boissons':'#1565C0','Desserts':'#7B3FA0'};
 const catCol=c=>CAT_COL[c]||'#155E83';
 let caisseVue=(()=>{try{return localStorage.getItem('terangaResto_vue')||'boutons'}catch(e){return 'boutons'}})();
@@ -450,7 +454,7 @@ function bandeau(html,col){const w=document.getElementById('pretWrap');if(!w.fir
 function ouTxt(o){return o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison':'À emporter'}
 function annonceCuisine(o,ajout){if(!me)return;const estCuisine=me.role==='cuisine'||tab==='cuisine';if(!estCuisine)return;
   if(!ajout&&Date.now()-new Date(o.date).getTime()>10*60000)return;
-  const KI=o.cuisineItems||o.items;
+  const KI=kItems(o);if(!KI.length)return;
   bandeau(`<div><div class="big">🔥 ${ajout?t('Ajout')+' · n°'+o.n:'Nouvelle commande n°'+o.n}</div><div class="sm">${esc(ouTxt(o))}${o.par?' · '+esc(o.par):''} · ${KI.map(i=>i.q+' × '+esc(i.nom)).join(', ')}</div></div>`,'#E07B0E');
   if(voixOn)setTimeout(()=>parler((ajout?'Ajout pour la commande numéro ':'Nouvelle commande, numéro ')+o.n+'. '+ouTxt(o)),700)}
 function annoncePrete(o){if(!me||me.role==='cuisine')return;if(me.role==='serveur'&&o.parId!==me.id)return;
@@ -500,7 +504,7 @@ async function webConfirmer(id){const w=WEB.find(x=>x.id===id);if(!w)return;cons
       return{pid:i.pid,nom:p?(i.t?p.nom+' ('+i.t+')':p.nom):i.nom,prix:tl?+tl.p||0:+i.prix||0,q:+i.q||1,...(i.t?{t:i.t}:{})}});
     const notes=[d.heure?'Heure : '+d.heure:'',d.note||''].filter(Boolean).join(' · ');
     const typ=d.mode==='livraison'?'livraison':d.mode==='emporter'?'emporter':'place';
-    const o={id:uid(),n,date:new Date().toISOString(),type:typ,table:'',client:{nom:d.nom||'',tel:d.tel||'',quartier:[d.zone,d.adr].filter(Boolean).join(' · ')},frais:typ==='livraison'?+d.frais||0:0,items,note:notes,statut:'cuisine',paye:false,par:'En ligne',parId:'web',web:true};
+    const o={id:uid(),n,date:new Date().toISOString(),type:typ,table:'',client:{nom:d.nom||'',tel:d.tel||'',quartier:[d.zone,d.adr].filter(Boolean).join(' · ')},frais:typ==='livraison'?+d.frais||0:0,items,note:notes,statut:items.some(enCuis)?'cuisine':'prete',paye:false,par:'En ligne',parId:'web',web:true};
     if(!await webMaj(id,'accepte',n))return;
     S.orders.push(o);save()}
   else if(!await webMaj(id,'accepte'))return;
@@ -545,7 +549,7 @@ const WO={
  'payer après':'fey ginnaaw','Mixte, dette, abonné…':'Ñaar, bor, abonne…','Le client donne…':'Kiliyaan bi jox na…','Compte juste':'Xaalis bu mat',
  'Autre montant':'Beneen xaalis','Valider':'Dëggal','Payer plus tard':'Fey ginnaaw','Plus tard':'Ginnaaw',
  'Écrivez combien le client paie avec chaque moyen.':'Bindal ñaata la kiliyaan bi di fey ci benn-benn.',
- 'Mise à jour automatique':'Dafay yeesal boppam','Aucune commande à préparer.':'Amul komand buñuy togg.','Écran cuisine':'Ekraanu waañ','Quitter TV':'Génn TV','en cours':'ñu ngi ci',
+ 'Mise à jour automatique':'Dafay yeesal boppam','Aucune commande à préparer.':'Amul komand buñuy togg.','Écran cuisine':'Ekraanu waañ','Ce qui va en cuisine':'Li dem waañ wi','Va en cuisine':'Dafay dem waañ wi','Pas en cuisine':'Du dem waañ wi','Quitter TV':'Génn TV','en cours':'ñu ngi ci',
  'En cours':'Ñu ngi ci','Toutes aujourd\'hui':'Lépp tey','Aucune commande en cours.':'Amul komand leegi.',
  'Changer':'Soppi','Choisir':'Tànn','WhatsApp livreur':'WhatsApp yóbbalkat','Pas encore de livreur':'Amagul yóbbalkat','Livrée':'Yóbbu nañu',
  'Ajouter des plats':'Yokk lekk','Ajout':'Yokk','Ajouter et envoyer en cuisine':'Yokk te yónnee ko waañ wi','Annuler l\'ajout':'Neenal yokk bi',
@@ -760,19 +764,20 @@ function valider(payer){
   if(cart.addTo){const o=S.orders.find(x=>x.id===cart.addTo);
     if(!o||o.paye||o.annule){toast('Cette commande est déjà payée');cart=newCart();render();return}
     items.forEach(it=>{const ex=o.items.find(i=>i.pid===it.pid&&i.prix===it.prix&&i.nom===it.nom);if(ex)ex.q+=it.q;else o.items.push({...it})});
+    if(!items.some(enCuis)){save();cart=newCart();toast(t('Ajout')+' n°'+o.n+' ✓');go('commandes');return}
     o.cuisineItems=items;o.ajout=(o.ajout||0)+1;o.cuisineDate=new Date().toISOString();
     if(cart.note)o.cuisineNote=cart.note;else delete o.cuisineNote;
     o.statut='cuisine';save();cart=newCart();toast(t('Ajout')+' n°'+o.n+' → '+t('Cuisine'));go('commandes');return}
   if(cart.type==='livraison'&&String(cart.tel||'').replace(/\D/g,'').length<7){toast('Livraison : écrivez le téléphone du client');return}
   if(cart.type!=='livraison'){cart.tel='';cart.quartier=''}
   const n=Math.max(0,...todayOrders().map(o=>o.n))+1;
-  const o={id:uid(),n,date:new Date().toISOString(),type:cart.type,table:cart.table,client:{nom:cart.nom,tel:cart.tel,quartier:cart.quartier},frais:cart.type==='livraison'?+cart.frais||0:0,items,note:cart.note,statut:'cuisine',paye:false,par:me.nom,parId:me.id||'patron'};
+  const o={id:uid(),n,date:new Date().toISOString(),type:cart.type,table:cart.table,client:{nom:cart.nom,tel:cart.tel,quartier:cart.quartier},frais:cart.type==='livraison'?+cart.frais||0:0,items,note:cart.note,statut:items.some(enCuis)?'cuisine':'prete',paye:false,par:me.nom,parId:me.id||'patron'};
   if(cart.type==='livraison')applyLiv(o,cart.livSel,cart.livreur,cart.livTel);
   S.orders.push(o);save();cart=newCart();
   if(payer==='especes'){render();cashModal(o.id)}
   else if(payer==='wave'||payer==='om'){finishPay(o,payer)}
   else if(payer){render();payModal(o.id)}
-  else{toast('Commande n°'+n+' envoyée en cuisine');render()}
+  else{toast(o.statut==='cuisine'?'Commande n°'+n+' envoyée en cuisine':'Commande n°'+n+' enregistrée (rien pour la cuisine)');render()}
 }
 function finishPay(o,mode,recu){
   o.paye=true;o.mode=mode;o.payeLe=new Date().toISOString();o.encPar=me.nom;if(recu)o.recu=recu;save();closeM();render();
@@ -816,13 +821,13 @@ function drawLiv(id){
 /* ---------- Écran cuisine ---------- */
 function ageMin(o){return Math.floor((Date.now()-new Date(o.cuisineDate||o.date).getTime())/60000)}
 function vCuisine(){
-  const L=todayOrders().filter(o=>!o.annule&&o.statut==='cuisine').sort((a,b)=>a.n-b.n);
+  const L=todayOrders().filter(o=>!o.annule&&o.statut==='cuisine'&&kItems(o).length).sort((a,b)=>a.n-b.n);
   const TY={place:'Sur place',emporter:'À emporter',livraison:'Livraison'};
   const tv=tvActif(),h=new Date();
   const head=tv?`<div class="tvbar"><div class="tvt"><h2>${esc(S.set.nom||'Teranga Resto')} · ${t('Cuisine')}</h2></div>${audioOk()?'':`<span class="tvsnd">🔈 ${t('Touchez l\'écran une fois pour activer le son')}</span>`}<span class="tvn">${L.length} ${t('en cours')}</span><span class="tvc">${pad(h.getHours())}:${pad(h.getMinutes())}</span><button class="btn sm ghost" onclick="tvSet(false)">✕ ${t('Quitter TV')}</button></div>`
    :`${isP()?`<div class="row"><button class="btn sm ghost" onclick="go('commandes')">← Commandes</button></div>`:''}<div class="row between"><h2>${t('Cuisine')}</h2><div class="row"><span class="muted">${t('Mise à jour automatique')}</span><button class="btn sm alt" onclick="tvSet(true)">📺 ${t('Mode TV')}</button></div></div>`;
   return `${head}
-  <div class="k-grid">${L.map(o=>{const a=ageMin(o),KI=o.cuisineItems||o.items,KN=o.cuisineItems?o.cuisineNote:o.note;return `<article class="k-card ${o.statut}${a>=20?' late':''}">
+  <div class="k-grid">${L.map(o=>{const a=ageMin(o),KI=kItems(o),KN=o.cuisineItems?o.cuisineNote:o.note;return `<article class="k-card ${o.statut}${a>=20?' late':''}">
     <div class="row between"><span class="num">n°${o.n}</span><span class="age ${a>=20&&o.statut==='cuisine'?'late':''}">${a} min</span></div>
     <div><span class="tag t-neutre">${t(TY[o.type])}${o.table?' · '+t('Table')+' '+esc(o.table):''}</span> ${o.cuisineItems?`<span class="tag t-du">${t('Ajout').toUpperCase()}</span>`:''}</div>
     ${KI.map(i=>`<div class="it">${i.q} × ${esc(i.nom)}</div>`).join('')}
@@ -987,7 +992,7 @@ function ticketOrder(id,after){const o=S.orders.find(x=>x.id===id);
    ${o.client&&o.client.tel?`<button class="btn alt full" onclick="waOrder('${id}')">Envoyer sur WhatsApp</button>`:''}
    <button class="btn alt full" onclick="copyTxt(ticketTxt(S.orders.find(x=>x.id==='${id}')))">Copier le ticket</button>
    <button class="btn ghost full" onclick="closeM();render()">${t('Fermer')}</button>`)}
-function ticketCuisine(id){const o0=S.orders.find(x=>x.id===id);const o={...o0,items:o0.cuisineItems||o0.items,note:o0.cuisineItems?o0.cuisineNote:o0.note};
+function ticketCuisine(id){const o0=S.orders.find(x=>x.id===id);const o={...o0,items:kItems(o0),note:o0.cuisineItems?o0.cuisineNote:o0.note};
   printHTML(`<div class="c xl">CUISINE n°${o.n}</div><div class="c">${{place:'SUR PLACE'+(o.table?' T'+esc(o.table):''),emporter:'À EMPORTER',livraison:'LIVRAISON'}[o.type]} · ${new Date(o.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</div><hr>${o.items.map(i=>`<div class="xl">${i.q} x ${esc(i.nom)}</div>`).join('')}${o.note?`<hr><div class="xl">NOTE : ${esc(o.note)}</div>`:''}`)}
 function ticketTxt(o){return `*${S.set.nom}*\nCommande n°${o.n}\n${o.items.map(i=>`${i.q} x ${i.nom} : ${F(i.prix*i.q)}`).join('\n')}${o.frais?`\nLivraison : ${F(o.frais)}`:''}${o.remise?`\nRemise : -${F(o.remise)}`:''}\n*TOTAL : ${F(tot(o))}*\n${o.paye?(o.mode==='credit'?'Mis en dette':'Payé ('+MODES[o.mode]+')'):'À payer'}${S.set.wave?`\nWave : ${S.set.wave}`:''}${S.set.om?`\nOrange Money : ${S.set.om}`:''}\nJërëjëf !`}
 const waNum=t=>{let n=String(t||'').replace(/\D/g,'');if(n.length===9)n='221'+n;return n};
@@ -1004,8 +1009,12 @@ function vMenu(){
    ${L.map(p=>`<div class="line">${platImg(p)?`<img class="thumb" src="${esc(platImg(p))}" alt="" loading="lazy">`:`<span class="thumb"></span>`}<div class="g" onclick="platModal('${p.id}')" style="cursor:pointer"><b>${esc(p.nom)}</b> ${p.jours&&p.jours.includes(wd)?`<span class="tag t-jour">${t('Plat du jour')}</span>`:''}${p.enLigne===false?` <span class="tag t-neutre">Pas sur la page</span>`:''}
      <div class="muted">${prixTxt(p)}${hasT(p)?' · '+p.tailles.length+' '+t('tailles'):''}${p.jours&&p.jours.length?' · '+p.jours.map(j=>JOURS[j].slice(0,3)).join(', '):''}</div></div>
      <button class="btn sm ${p.dispo?'alt':'ghost'}" onclick="toggleDispo('${p.id}')">${p.dispo?t('Disponible'):t('Fini')}</button></div>`).join('')}</section>`}).join('')}
-  <div class="muted" style="font-size:14px">Touchez un plat pour changer son prix, ses jours, ses photos ou sa description. « Fini » le cache de la caisse quand la marmite est vide.</div>`;
+  <div class="muted" style="font-size:14px">Touchez un plat pour changer son prix, ses jours, ses photos ou sa description. « Fini » le cache de la caisse quand la marmite est vide.</div>
+  ${isP()?`<section class="card"><div class="lbl">${t('Ce qui va en cuisine')}</div>
+   <div class="muted" style="font-size:14px">${t('Éteignez une catégorie (par exemple Boissons) si le serveur s\'en occupe : elle ne s\'affiche plus sur l\'écran cuisine, la TV et le bon cuisine.')}</div>
+   ${CATS.map(c=>{const on=!horsC().includes(c);return `<button class="switch ${on?'on':''}" onclick="setHC('${c}')"><span>${t(c)} · ${on?t('Va en cuisine'):t('Pas en cuisine')}</span><span class="knob"></span></button>`}).join('')}</section>`:''}`;
 }
+function setHC(c){if(!isP())return;const L=horsC().slice(),i=L.indexOf(c);if(i>=0)L.splice(i,1);else L.push(c);S.set.horsCuisine=L;save();render()}
 function toggleDispo(id){const p=S.plats.find(x=>x.id===id);p.dispo=!p.dispo;save();render()}
 function platModal(id){if(!isP()){toast('Seul le patron peut changer les plats et les prix');return}const p=id?S.plats.find(x=>x.id===id):{nom:'',prix:'',cat:CATS.includes(catF)?catF:'Plats',jours:[],dispo:true,desc:'',enLigne:true};
   tmpPhotos=Array.isArray(p.photos)?p.photos.slice(0,4):(p.photo?[p.photo]:[]);tmpNew=[];tmpGone=[];phBusy=0;
