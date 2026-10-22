@@ -231,6 +231,13 @@ body.nonav{padding-bottom:24px}
   #print .xl{font-size:15px;font-weight:700}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.tgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tbtn{position:relative;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:16px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-height:84px;font:inherit}
+.tbtn b{font-size:19px}.tbtn span{font-weight:800;color:var(--bissap)}
+.tbtn .q{position:absolute;top:-8px;right:-6px;background:var(--bissap);color:var(--on-accent);border-radius:999px;min-width:26px;height:26px;display:grid;place-items:center;font-size:14px;padding:0 6px}
+.tbox{display:flex;flex-direction:column;gap:8px;border:1.5px dashed var(--line);border-radius:12px;padding:10px}
+.trow{display:grid;grid-template-columns:1fr 110px auto;gap:8px;align-items:center}
+.trow input{min-width:0}
 </style>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -463,7 +470,8 @@ async function webMaj(id,statut,n){if(DEMO||!SB)return true;try{const r=await SB
 async function webConfirmer(id){const w=WEB.find(x=>x.id===id);if(!w)return;const d=w.data||{},I=(d.items||[]).filter(i=>i.q>0);
   let n=null;
   if(I.length){n=Math.max(0,...todayOrders().map(o=>o.n))+1;
-    const items=I.map(i=>{const p=S.plats.find(x=>x.id===i.pid);return{pid:i.pid,nom:p?p.nom:i.nom,prix:+i.prix||0,q:+i.q||1}});
+    const items=I.map(i=>{const p=S.plats.find(x=>x.id===i.pid);const tl=i.t&&p&&hasT(p)?p.tailles.find(x=>x.n===i.t):null;
+      return{pid:i.pid,nom:p?(i.t?p.nom+' ('+i.t+')':p.nom):i.nom,prix:tl?+tl.p||0:+i.prix||0,q:+i.q||1,...(i.t?{t:i.t}:{})}});
     const notes=[d.heure?'Heure : '+d.heure:'',d.note||''].filter(Boolean).join(' · ');
     const typ=d.mode==='livraison'?'livraison':d.mode==='emporter'?'emporter':'place';
     const o={id:uid(),n,date:new Date().toISOString(),type:typ,table:'',client:{nom:d.nom||'',tel:d.tel||'',quartier:[d.zone,d.adr].filter(Boolean).join(' · ')},frais:typ==='livraison'?+d.frais||0:0,items,note:notes,statut:'cuisine',paye:false,par:'En ligne',parId:'web',web:true};
@@ -625,6 +633,17 @@ function logout(){setMe(null);pinBuf='';cart=newCart();closeM();render()}
 
 /* ---------- Caisse ---------- */
 function platImg(p){return (Array.isArray(p.photos)&&p.photos[0])||p.photo||''}
+/* Tailles : un plat peut avoir un seul prix, ou plusieurs tailles (Petit, Moyen, Grand…) avec leur prix */
+const encK=x=>encodeURIComponent(x).replace(/'/g,'%27');
+const hasT=p=>Array.isArray(p.tailles)&&p.tailles.length>0;
+function prixTxt(p){if(!hasT(p))return F(p.prix);const v=p.tailles.map(x=>+x.p||0),a=Math.min(...v),b=Math.max(...v);return a===b?F(a):F(a).replace(/\s*F$/,'')+' – '+F(b)}
+function cItem(key){const i=key.indexOf('~'),id=i<0?key:key.slice(0,i);const p=S.plats.find(x=>x.id===id);if(!p)return null;
+  if(i<0)return{key,p,nom:p.nom,prix:p.prix,tl:''};const tl=(p.tailles||[]).find(x=>x.n===key.slice(i+1));if(!tl)return null;return{key,p,nom:p.nom+' ('+tl.n+')',prix:+tl.p||0,tl:tl.n}}
+const cartQ=p=>Object.entries(cart.items).reduce((a,[k,q])=>a+((k===p.id||k.startsWith(p.id+'~'))?q:0),0);
+function tailleModal(id){const p=S.plats.find(x=>x.id===id);if(!p)return;
+  modal(`<h2>${esc(p.nom)}</h2><div class="muted">${t('Choisissez la taille')}</div>
+   <div class="tgrid">${p.tailles.map(x=>`<button class="tbtn" onclick="addK('${p.id}~'+decodeURIComponent('${encK(x.n)}'));closeM()"><b>${esc(x.n)}</b><span>${F(+x.p||0)}</span>${cart.items[p.id+'~'+x.n]?`<span class="q">${cart.items[p.id+'~'+x.n]}</span>`:''}</button>`).join('')}</div>
+   <button class="btn ghost full" onclick="closeM()">${t('Fermer')}</button>`)}
 function photoBox(p){return platImg(p)?`<img class="ph" src="${esc(platImg(p))}" alt="" loading="lazy">`:`<span class="ph" aria-hidden="true">${esc(p.nom.trim().charAt(0).toUpperCase())}</span>`}
 function rapideZones(){
   const wd=new Date().getDay(),from=Date.now()-30*864e5,cnt={};
@@ -646,15 +665,15 @@ function vCaisse(){
   const wd=new Date().getDay();
   const jour=S.plats.filter(p=>p.jours&&p.jours.includes(wd)&&p.dispo);
   const list=catF==='Rapide'?rapides():S.plats.filter(p=>p.cat===catF);
-  const lines=Object.entries(cart.items).filter(([,q])=>q>0).map(([id,q])=>{const p=S.plats.find(x=>x.id===id);return p?{p,q}:null}).filter(Boolean);
-  const total=lines.reduce((a,l)=>a+l.p.prix*l.q,0)+(cart.type==='livraison'&&!cart.addTo?+cart.frais||0:0);
+  const lines=Object.entries(cart.items).filter(([,q])=>q>0).map(([k,q])=>{const c=cItem(k);return c?{...c,q}:null}).filter(Boolean);
+  const total=lines.reduce((a,l)=>a+l.prix*l.q,0)+(cart.type==='livraison'&&!cart.addTo?+cart.frais||0:0);
   const withPh=S.plats.some(p=>platImg(p));
   let addO=cart.addTo?S.orders.find(x=>x.id===cart.addTo):null;
   if(addO&&(addO.paye||addO.annule)){cart.addTo='';addO=null}
   const pl=p=>`<button class="plat ${p.jours&&p.jours.includes(wd)?'jour':''} ${p.dispo?'':'off'}" onclick="addP('${p.id}')" ${p.dispo?'':'disabled'}>
-      ${cart.items[p.id]?`<span class="q">${cart.items[p.id]}</span>`:''}${withPh?photoBox(p):''}<b>${esc(p.nom)}</b><span>${F(p.prix)}</span>${p.dispo?'':`<span class="tag t-du">${t('Fini')}</span>`}</button>`;
+      ${cartQ(p)?`<span class="q">${cartQ(p)}</span>`:''}${withPh?photoBox(p):''}<b>${esc(p.nom)}</b><span>${prixTxt(p)}</span>${p.dispo?'':`<span class="tag t-du">${t('Fini')}</span>`}</button>`;
   const bt=p=>`<button class="bt ${p.jours&&p.jours.includes(wd)?'jour':''} ${p.dispo?'':'off'}" style="--cc:${catCol(p.cat)}" onclick="addP('${p.id}')" ${p.dispo?'':'disabled'}>
-      ${cart.items[p.id]?`<span class="q">${cart.items[p.id]}</span>`:''}<b>${esc(p.nom)}</b><span>${p.dispo?F(p.prix):t('Fini')}</span></button>`;
+      ${cartQ(p)?`<span class="q">${cartQ(p)}</span>`:''}<b>${esc(p.nom)}</b><span>${p.dispo?prixTxt(p):t('Fini')}</span></button>`;
   const bList=catF==='Rapide'?list:list.slice().sort((a,b)=>(b.dispo?1:0)-(a.dispo?1:0));
   const vueBtn=`<button class="vtog" onclick="setVue('${caisseVue==='boutons'?'photos':'boutons'}')">${caisseVue==='boutons'?'🖼️ Photos':'▦ Boutons'}</button>`;
   if(caisseVue==='boutons')return `<div class="caisse"><div class="cleft">
@@ -693,8 +712,8 @@ function vCaisse(){
          ${S.livExt.map((l,i)=>`<option value="e:${i}" ${cart.livSel==='e:'+i?'selected':''}>${esc(l.nom)} (externe)</option>`).join('')}
          <option value="new" ${cart.livSel==='new'?'selected':''}>+ Livreur externe</option></select></label></div>
        ${cart.livSel==='new'?`<div class="row"><label class="f">Nom du livreur<input id="c_ln" value="${esc(cart.livreur)}" oninput="cart.livreur=this.value"></label><label class="f">Son téléphone<input id="c_lt" inputmode="tel" value="${esc(cart.livTel)}" oninput="cart.livTel=this.value"></label></div>`:''}`:''}`}
-    <div>${lines.map(l=>`<div class="line"><div class="g"><b>${esc(l.p.nom)}</b><div class="muted">${F(l.p.prix)}</div></div>
-       <div class="qty"><button onclick="decP('${l.p.id}')" aria-label="Moins">−</button><b style="min-width:22px;text-align:center">${l.q}</b><button onclick="addP('${l.p.id}')" aria-label="Plus">+</button></div></div>`).join('')||`<div class="empty">${t('Touchez un plat pour l\'ajouter.')}</div>`}</div>
+    <div>${lines.map(l=>`<div class="line"><div class="g"><b>${esc(l.nom)}</b><div class="muted">${F(l.prix)}</div></div>
+       <div class="qty"><button onclick="decP(decodeURIComponent('${encK(l.key)}'))" aria-label="Moins">−</button><b style="min-width:22px;text-align:center">${l.q}</b><button onclick="addK(decodeURIComponent('${encK(l.key)}'))" aria-label="Plus">+</button></div></div>`).join('')||`<div class="empty">${t('Touchez un plat pour l\'ajouter.')}</div>`}</div>
     <label class="f">${t('Note')}<input id="c_note" placeholder="Ex : sans piment, bien cuit…" value="${esc(cart.note)}" oninput="cart.note=this.value"></label>
     <div class="total"><span>${addO?t('Ajout'):t('Total')}</span><span id="cartTot">${F(total)}</span></div>
     ${addO?`<button class="btn full" style="min-height:58px" onclick="valider(false)">${t('Ajouter et envoyer en cuisine')}</button>`:me.role==='serveur'?`<button class="btn full" onclick="valider(false)">${t('Envoyer en cuisine')}</button>`:`<div class="paybar">
@@ -702,15 +721,16 @@ function vCaisse(){
       <div class="grid2"><button class="btn alt" onclick="valider(false)">${t('Envoyer en cuisine')} · ${t('payer après')}</button><button class="btn ghost" onclick="valider(true)">${t('Mixte, dette, abonné…')}</button></div>`}
   </section>`}
 }
-function updTot(){const lines=Object.entries(cart.items).filter(([,q])=>q>0);let s=0;lines.forEach(([id,q])=>{const p=S.plats.find(x=>x.id===id);if(p)s+=p.prix*q});if(cart.type==='livraison'&&!cart.addTo)s+=+cart.frais||0;const e=document.getElementById('cartTot');if(e)e.textContent=F(s)}
-function addP(id){cart.items[id]=(cart.items[id]||0)+1;render()}
+function updTot(){const lines=Object.entries(cart.items).filter(([,q])=>q>0);let s=0;lines.forEach(([k,q])=>{const c=cItem(k);if(c)s+=c.prix*q});if(cart.type==='livraison'&&!cart.addTo)s+=+cart.frais||0;const e=document.getElementById('cartTot');if(e)e.textContent=F(s)}
+function addP(id){const p=S.plats.find(x=>x.id===id);if(p&&hasT(p)){tailleModal(id);return}addK(id)}
+function addK(k){cart.items[k]=(cart.items[k]||0)+1;render()}
 function decP(id){cart.items[id]=Math.max(0,(cart.items[id]||0)-1);if(!cart.items[id])delete cart.items[id];render()}
 function valider(payer){
-  const items=Object.entries(cart.items).filter(([,q])=>q>0).map(([id,q])=>{const p=S.plats.find(x=>x.id===id);return{pid:id,nom:p.nom,prix:p.prix,q}});
+  const items=Object.entries(cart.items).filter(([,q])=>q>0).map(([k,q])=>{const c=cItem(k);return c?{pid:c.p.id,nom:c.nom,prix:c.prix,q,...(c.tl?{t:c.tl}:{})}:null}).filter(Boolean);
   if(!items.length){toast('Ajoutez au moins un plat');return}
   if(cart.addTo){const o=S.orders.find(x=>x.id===cart.addTo);
     if(!o||o.paye||o.annule){toast('Cette commande est déjà payée');cart=newCart();render();return}
-    items.forEach(it=>{const ex=o.items.find(i=>i.pid===it.pid&&i.prix===it.prix);if(ex)ex.q+=it.q;else o.items.push({...it})});
+    items.forEach(it=>{const ex=o.items.find(i=>i.pid===it.pid&&i.prix===it.prix&&i.nom===it.nom);if(ex)ex.q+=it.q;else o.items.push({...it})});
     o.cuisineItems=items;o.ajout=(o.ajout||0)+1;o.cuisineDate=new Date().toISOString();
     if(cart.note)o.cuisineNote=cart.note;else delete o.cuisineNote;
     o.statut='cuisine';save();cart=newCart();toast(t('Ajout')+' n°'+o.n+' → '+t('Cuisine'));go('commandes');return}
@@ -938,7 +958,7 @@ function vMenu(){
   return `<div class="row">${isP()?`<button class="btn" onclick="platModal()">+ ${t('Ajouter')} un plat</button>`:''}<button class="btn alt" onclick="shareMenu()">${t('Partager le menu (WhatsApp)')}</button></div>
   ${CATS.map(c=>{const L=S.plats.filter(p=>p.cat===c);if(!L.length)return'';return `<section class="card"><div class="lbl">${t(c)}</div>
    ${L.map(p=>`<div class="line">${platImg(p)?`<img class="thumb" src="${esc(platImg(p))}" alt="" loading="lazy">`:`<span class="thumb"></span>`}<div class="g" onclick="platModal('${p.id}')" style="cursor:pointer"><b>${esc(p.nom)}</b> ${p.jours&&p.jours.includes(wd)?`<span class="tag t-jour">${t('Plat du jour')}</span>`:''}${p.enLigne===false?` <span class="tag t-neutre">Pas sur la page</span>`:''}
-     <div class="muted">${F(p.prix)}${p.jours&&p.jours.length?' · '+p.jours.map(j=>JOURS[j].slice(0,3)).join(', '):''}</div></div>
+     <div class="muted">${prixTxt(p)}${hasT(p)?' · '+p.tailles.length+' '+t('tailles'):''}${p.jours&&p.jours.length?' · '+p.jours.map(j=>JOURS[j].slice(0,3)).join(', '):''}</div></div>
      <button class="btn sm ${p.dispo?'alt':'ghost'}" onclick="toggleDispo('${p.id}')">${p.dispo?t('Disponible'):t('Fini')}</button></div>`).join('')}</section>`}).join('')}
   <div class="muted" style="font-size:14px">Touchez un plat pour changer son prix, ses jours, ses photos ou sa description. « Fini » le cache de la caisse quand la marmite est vide.</div>`;
 }
@@ -949,8 +969,10 @@ function platModal(id){if(!isP()){toast('Seul le patron peut changer les plats e
    <div class="lbl">Photos (jusqu'à 4) · la 1<sup>re</sup> sert pour la caisse</div>
    <div id="phList" class="phlist">${phListHTML()}</div>
    <label class="f">Nom du plat<input id="m_nom" value="${esc(p.nom)}"></label>
-   <div class="row"><label class="f">Prix (F)<input id="m_prix" inputmode="numeric" value="${esc(p.prix)}"></label>
+   <div class="row"><label class="f" id="m_prixL" ${hasT(p)?'hidden':''}>Prix (F)<input id="m_prix" inputmode="numeric" value="${esc(p.prix)}"></label>
    <label class="f">Catégorie<select id="m_cat">${CATS.map(c=>`<option ${p.cat===c?'selected':''}>${c}</option>`).join('')}</select></label></div>
+   <label class="chk"><input type="checkbox" id="m_tOn" ${hasT(p)?'checked':''} onchange="tOnChg(this.checked)"> Plusieurs tailles / prix (Petit, Moyen, Grand…)</label>
+   <div id="m_tBox" class="tbox" ${hasT(p)?'':'hidden'}>${tRowsHTML(hasT(p)?p.tailles:[])}</div>
    <label class="f">Description pour les clients (facultatif)<textarea id="m_desc" rows="2" maxlength="300" placeholder="Ex : riz au poisson, légumes, sauce tomate. Pour 1 personne.">${esc(p.desc||'')}</textarea></label>
    <label class="chk"><input type="checkbox" id="m_web" ${p.enLigne!==false?'checked':''}> Afficher sur ma page client</label>
    <div class="lbl">${t('Plat du jour')} le…</div>
@@ -959,6 +981,14 @@ function platModal(id){if(!isP()){toast('Seul le patron peut changer les plats e
    ${id?`<button class="btn ghost full" style="color:var(--bad)" onclick="delPlat('${id}')">${t('Supprimer')} ce plat</button>`:''}
    <button class="btn ghost full" onclick="cancelPlat()">${t('Annuler')}</button>`)}
 let tmpPhotos=[],tmpNew=[],tmpGone=[],phBusy=0;
+const T_EX=['Petit','Moyen','Grand','Familial'];
+function tRowsHTML(L){if(!L.length)L=[{n:'Petit',p:''},{n:'Grand',p:''}];
+  return L.map((x,i)=>`<div class="trow"><input class="m_tn" value="${esc(x.n)}" placeholder="${T_EX[i]||'Taille'}" aria-label="Nom de la taille"><input class="m_tp" inputmode="numeric" value="${esc(x.p)}" placeholder="Prix" aria-label="Prix"><button class="btn sm ghost" onclick="tDel(this)" aria-label="Enlever cette taille">×</button></div>`).join('')
+   +`<button class="btn sm alt" onclick="tAdd()">+ ${t('Ajouter une taille')}</button>`}
+function tRead(){return [...document.querySelectorAll('#m_tBox .trow')].map(r=>({n:r.querySelector('.m_tn').value.trim().slice(0,30),p:+r.querySelector('.m_tp').value||0}))}
+function tAdd(){const L=tRead();if(L.length>=8)return toast('8 tailles maximum');L.push({n:'',p:''});document.getElementById('m_tBox').innerHTML=tRowsHTML(L)}
+function tDel(b){b.closest('.trow').remove();if(!document.querySelector('#m_tBox .trow'))document.getElementById('m_tBox').innerHTML=tRowsHTML([])}
+function tOnChg(on){document.getElementById('m_tBox').hidden=!on;document.getElementById('m_prixL').hidden=on}
 const PH_BUCKET='resto-photos';
 function phListHTML(){
   return tmpPhotos.map((u,i)=>`<div class="phitem"><img src="${esc(u)}" alt="Photo ${i+1}">${!DEMO&&!/^https:/.test(u)?'<span class="phwarn">sur ce téléphone seulement</span>':''}
@@ -985,15 +1015,21 @@ function storageRemove(urls){if(DEMO||!SB||!USER)return;const mark='/object/publ
   const paths=urls.filter(u=>typeof u==='string'&&u.includes(mark)).map(u=>decodeURIComponent(u.split(mark)[1].split('?')[0])).filter(p=>p.startsWith(USER.id+'/'));
   if(paths.length)SB.storage.from(PH_BUCKET).remove(paths).catch(()=>{})}
 function cancelPlat(){storageRemove(tmpNew);tmpNew=[];tmpGone=[];closeM()}
-function savePlat(id){if(phBusy)return toast('Attendez la fin de l\'envoi de la photo');const nom=val('m_nom').trim(),prix=+val('m_prix');if(!nom||!prix){toast('Nom et prix obligatoires');return}
+function savePlat(id){if(phBusy)return toast('Attendez la fin de l\'envoi de la photo');const nom=val('m_nom').trim();let prix=+val('m_prix');
+  const tOn=document.getElementById('m_tOn')&&document.getElementById('m_tOn').checked;let tailles=null;
+  if(tOn){const L=tRead().filter(x=>x.n||x.p);if(L.some(x=>!x.n||!(x.p>0)))return toast('Chaque taille : un nom et un prix');
+    if(new Set(L.map(x=>x.n.toLowerCase())).size<L.length)return toast('Deux tailles ont le même nom');
+    if(!L.length)return toast('Ajoutez au moins une taille, ou décochez « Plusieurs tailles »');tailles=L;prix=Math.min(...L.map(x=>x.p))}
+  if(!nom||!prix){toast('Nom et prix obligatoires');return}
   const jours=[...document.querySelectorAll('.m_j:checked')].map(x=>+x.value);
   const w=document.getElementById('m_web');const d={nom,prix,cat:val('m_cat'),jours,photos:tmpPhotos.slice(0,4),photo:'',desc:val('m_desc').trim().slice(0,300),enLigne:w?w.checked:true};
-  if(id)Object.assign(S.plats.find(x=>x.id===id),d);else S.plats.push({id:uid(),dispo:true,...d});
+  if(tailles)d.tailles=tailles;
+  if(id){const P=S.plats.find(x=>x.id===id);Object.assign(P,d);if(!tailles)delete P.tailles}else S.plats.push({id:uid(),dispo:true,...d});
   storageRemove(tmpGone);tmpNew=[];tmpGone=[];save();closeM();render();toast('Enregistré')}
 let delConf=null;
 function delPlat(id){if(delConf!==id){delConf=id;toast('Touchez encore pour supprimer');return}const dp=S.plats.find(x=>x.id===id);if(dp&&Array.isArray(dp.photos))storageRemove(dp.photos);storageRemove(tmpNew);tmpNew=[];S.plats=S.plats.filter(x=>x.id!==id);delConf=null;save();closeM();render()}
 function shareMenu(){const wd=new Date().getDay();const jour=S.plats.filter(p=>p.dispo&&p.jours&&p.jours.includes(wd));
-  const txt=`*${S.set.nom}* 🍽️\nMenu du ${JOURS[wd].toLowerCase()}\n${jour.length?`\n⭐ *Plat du jour* : ${jour.map(p=>p.nom+' '+F(p.prix)).join(', ')}\n`:''}${CATS.map(c=>{const L=S.plats.filter(p=>p.cat===c&&p.dispo);return L.length?`\n*${c}*\n`+L.map(p=>`• ${p.nom} : ${F(p.prix)}`).join('\n'):''}).join('\n')}\n\n🛵 Livraison possible${S.set.fraisLiv?' ('+F(S.set.fraisLiv)+')':''}\n📞 Commandez au ${S.set.tel}${S.set.wave?`\nWave : ${S.set.wave}`:''}`;
+  const txt=`*${S.set.nom}* 🍽️\nMenu du ${JOURS[wd].toLowerCase()}\n${jour.length?`\n⭐ *Plat du jour* : ${jour.map(p=>p.nom+' '+prixTxt(p)).join(', ')}\n`:''}${CATS.map(c=>{const L=S.plats.filter(p=>p.cat===c&&p.dispo);return L.length?`\n*${c}*\n`+L.map(p=>`• ${p.nom} : ${hasT(p)?p.tailles.map(x=>x.n+' '+F(+x.p||0)).join(' · '):F(p.prix)}`).join('\n'):''}).join('\n')}\n\n🛵 Livraison possible${S.set.fraisLiv?' ('+F(S.set.fraisLiv)+')':''}\n📞 Commandez au ${S.set.tel}${S.set.wave?`\nWave : ${S.set.wave}`:''}`;
   copyTxt(txt);
   modal(`<h2>Menu à partager</h2><div class="muted">Le texte est copié. Collez-le dans votre statut WhatsApp ou un groupe.</div><textarea rows="12">${esc(txt)}</textarea><button class="btn full" onclick="copyTxt(document.querySelector('.sheet textarea').value)">Copier encore</button><button class="btn ghost full" onclick="closeM()">${t('Fermer')}</button>`)}
 

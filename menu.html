@@ -119,6 +119,9 @@ input,select,textarea{border:1.5px solid var(--line);border-radius:12px;padding:
 .foot{text-align:center;color:var(--muted);font-size:calc(var(--fs)*.8);padding:24px 16px 0}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:700;z-index:30;max-width:90%}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+.tgrid{display:flex;flex-direction:column;gap:10px}
+.tb{display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px}
+.tb.on{border-color:var(--blue)}
 </style>
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
 <link rel="icon" href="apple-touch-icon.png?v=1">
@@ -149,7 +152,7 @@ const WO={
  'Zone de livraison':'Fan lañu koy yóbbal','Adresse ou repère':'Adrees walla màndarga','Heure souhaitée':'Waxtu bi nga bëgg','Dès que possible':'Bu gaaw',
  'Date':'Bes','Heure':'Waxtu','Nombre de personnes':'Ñaata nit','Note pour le restaurant':'Bind ngir restoraan bi','Sous-total':'Lépp ci lekk yi',
  'Frais de livraison':'Peyu yóbbal','Total':'Lépp','Envoyer ma commande sur WhatsApp':'Yónnee sama komand ci WhatsApp','Envoyer ma réservation sur WhatsApp':'Yónnee sama réservation ci WhatsApp',
- 'à confirmer':'dañuy wax','Fermer':'Tëj','Votre panier est vide.':'Sa panier amul dara.','Comment voulez-vous votre repas ?':'Naka nga bëgg sa lekk ?',
+ 'à confirmer':'dañuy wax','Fermer':'Tëj','Choisir':'Tànn','Choisissez la taille':'Tànnal','Votre panier est vide.':'Sa panier amul dara.','Comment voulez-vous votre repas ?':'Naka nga bëgg sa lekk ?',
  'Le restaurant vous répond sur WhatsApp pour confirmer.':'Restoraan bi dina la tontu ci WhatsApp ngir dëggal.','Vider':'Far lépp','Menu':'Menu',
  'Écrivez votre nom.':'Bindal sa tur.','Écrivez l\'adresse de livraison.':'Bindal adrees bi.','Choisissez la zone de livraison.':'Tànnal fan lañu koy yóbbal.',
  'Choisissez au moins un plat.':'Tànnal benn lekk.','Choisissez la date et l\'heure.':'Tànnal bes ak waxtu.','Réserver une table':'Jàppal taabal',
@@ -175,7 +178,7 @@ function demoData(){const wd=new Date().getDay();
    plats:[
     {id:'d1',nom:'Thiéboudienne',prix:2000,cat:'Plats',dispo:true,desc:'Riz au poisson frais, légumes et sauce tomate. Pour 1 personne.',jours:[wd],photos:[ill('#E7C9A0','#D9822B','#8C3B1B','#3F7D3A'),ill('#D7E3C4','#D9822B','#B8562B','#F2C14E'),ill('#F3D9B1','#C96E2A','#3F7D3A','#8C3B1B')]},
     {id:'d2',nom:'Yassa poulet',prix:2000,cat:'Plats',dispo:true,desc:'Poulet mariné au citron et oignons, riz blanc.',jours:[],photos:[ill('#F0E1B8','#F4F1E6','#E3B23C','#6B8E23'),ill('#E9D6A8','#F4F1E6','#C98A1E','#E3B23C')]},
-    {id:'d3',nom:'Mafé',prix:1500,cat:'Plats',dispo:true,desc:'Sauce arachide, viande de bœuf, riz.',jours:[],photos:[ill('#E8CDB0','#9C5A2B','#6B3A1C','#C2853B')]},
+    {id:'d3',nom:'Mafé',prix:1500,cat:'Plats',dispo:true,desc:'Sauce arachide, viande de bœuf, riz.',tailles:[{n:'Petit',p:1500},{n:'Grand',p:2500},{n:'Familial',p:6000}],jours:[],photos:[ill('#E8CDB0','#9C5A2B','#6B3A1C','#C2853B')]},
     {id:'d4',nom:'Soupou kandja',prix:2000,cat:'Plats',dispo:false,desc:'Sauce gombo, poisson et fruits de mer.',jours:[],photos:[ill('#D9E2C3','#5E7A2B','#8C3B1B','#3B5A1A')]},
     {id:'d5',nom:'Pain omelette',prix:500,cat:'Petit-déjeuner',dispo:true,desc:'Pain frais, omelette, oignons.',jours:[],photos:[]},
     {id:'d6',nom:'Dibi agneau (½ kg)',prix:4000,cat:'Grillades',dispo:true,desc:'Agneau grillé au feu de bois, oignons et moutarde.',jours:[],photos:[ill('#E6CFC0','#7A3A22','#B8562B','#F2C14E')]},
@@ -203,16 +206,32 @@ async function boot(){
     if(!d.ok){R=null;STATE=d.raison==='introuvable'?'notfound':'off';try{localStorage.removeItem('trm.menu.'+CODE)}catch(e){}render();return}
     if(!('logo' in d)){try{const v=await sb.rpc('resto_vitrine',{p_code:CODE});if(!v.error&&v.data)Object.assign(d,v.data)}catch(e){}}
     R=d;STATE='ok';store('trm.menu.'+CODE,d);
-    const ids=new Set(d.plats.map(p=>p.id));for(const k in cart)if(!ids.has(k))delete cart[k];
+    for(const k in cart)if(!cI(k))delete cart[k];
     render()}
   catch(e){if(!R){STATE='net';render()}}
 }
 
 /* ---------- Calculs ---------- */
 const plat=id=>R.plats.find(p=>p.id===id);
-function lines(){return Object.entries(cart).map(([id,q])=>{const p=plat(id);return p&&q>0&&p.dispo!==false?{p,q}:null}).filter(Boolean)}
+/* Tailles : clé du panier = id du plat, ou id~taille quand le plat a plusieurs tailles */
+const hasT=p=>Array.isArray(p.tailles)&&p.tailles.length>0;
+const encK=x=>encodeURIComponent(x).replace(/'/g,'%27');
+function cI(key){const i=key.indexOf('~'),p=plat(i<0?key:key.slice(0,i));if(!p)return null;
+  if(i<0)return hasT(p)?null:{key,p,nom:p.nom,prix:p.prix,tl:''};const tl=(p.tailles||[]).find(x=>x.n===key.slice(i+1));return tl?{key,p,nom:p.nom+' ('+tl.n+')',prix:+tl.p||0,tl:tl.n}:null}
+const qOf=p=>Object.entries(cart).reduce((a,[k,q])=>a+((k===p.id||k.startsWith(p.id+'~'))?q:0),0);
+function prixTxt(p){if(!hasT(p))return F(p.prix);const v=p.tailles.map(x=>+x.p||0),a=Math.min(...v),b=Math.max(...v);return a===b?F(a):F(a).replace(/\s*F$/,'')+' – '+F(b)}
+function lines(){return Object.entries(cart).map(([k,q])=>{const c=cI(k);return c&&q>0&&c.p.dispo!==false?{...c,q}:null}).filter(Boolean)}
 function nItems(){return lines().reduce((a,l)=>a+l.q,0)}
-function subTot(){return lines().reduce((a,l)=>a+l.p.prix*l.q,0)}
+function subTot(){return lines().reduce((a,l)=>a+l.prix*l.q,0)}
+function choisir(id){const p=plat(id);if(!p)return;
+  $('ovWrap').innerHTML=`<div class="ov" onclick="if(event.target===this)closeOrder()"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(p.nom)}">
+   <div class="sh"><h2>${esc(p.nom)}</h2><button class="x" onclick="closeOrder()">${t('Fermer')}</button></div>
+   <div class="muted">${t('Choisissez la taille')}</div>
+   <div class="tgrid">${p.tailles.map(x=>{const k=p.id+'~'+x.n,q=cart[k]||0;return `<div class="tb ${q?'on':''}"><div><b>${esc(x.n)}</b><div class="price">${F(+x.p||0)}</div></div>
+     ${q?`<div class="qty"><button onclick="decT(decodeURIComponent('${encK(k)}'))" aria-label="Moins">−</button><b>${q}</b><button onclick="incT(decodeURIComponent('${encK(k)}'))" aria-label="Plus">+</button></div>`:`<button class="add" onclick="incT(decodeURIComponent('${encK(k)}'))">+ ${t('Ajouter')}</button>`}</div>`}).join('')}</div>
+   <button class="add" style="width:100%" onclick="closeOrder()">OK</button></div></div>`}
+function incT(k){const c=cI(k);if(!c||c.p.dispo===false)return;cart[k]=Math.min(50,(cart[k]||0)+1);sent=false;saveCart();choisir(c.p.id)}
+function decT(k){const c=cI(k);cart[k]=Math.max(0,(cart[k]||0)-1);if(!cart[k])delete cart[k];saveCart();if(c)choisir(c.p.id)}
 function zones(){return Array.isArray(R.zones)?R.zones.filter(z=>z&&z.nom):[]}
 function frais(){if(mode!=='livraison')return 0;const z=zones().find(z=>z.nom===o.zone);return z?Math.max(0,+z.prix||0):0}
 function services(){const s=R.services||{};return[['livraison','Livraison'],['emporter','À emporter'],['place','Sur place']].filter(([k])=>s[k]!==false)}
@@ -223,12 +242,12 @@ function photos(p){const ph=(Array.isArray(p.photos)?p.photos:[]).filter(u=>type
    :`<div class="noimg" aria-hidden="true"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 14h16a8 8 0 0 1-16 0zM2 14h20M12 6v3M8 4v2M16 4v2"/></svg></div>`;
   return `<div class="pics"><div class="strip" data-n="${ph.length}" onscroll="dotSync(this)">${inner}</div>${ph.length>1?`<div class="dots" aria-hidden="true">${ph.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:''}</div>`}
 function dotSync(el){const i=Math.round(el.scrollLeft/el.clientWidth);const d=el.parentNode.querySelectorAll('.dots i');d.forEach((x,j)=>x.classList.toggle('on',j===i))}
-function card(p,jour){const q=cart[p.id]||0,out=p.dispo===false;
+function card(p,jour){const T=hasT(p),q=T?qOf(p):(cart[p.id]||0),out=p.dispo===false;
   return `<article class="card ${out?'out':''}">${photos(p)}
    ${out?`<span class="badge b-out">${t('Épuisé')}</span>`:jour?`<span class="badge b-jour">${t('Plat du jour')}</span>`:''}
    <div class="cb"><h3>${esc(p.nom)}</h3>${p.desc?`<div class="desc">${esc(p.desc)}</div>`:''}
-    <div class="cf"><span class="price">${F(p.prix)}</span>
-     ${out?`<button class="add" disabled>${t('Épuisé')}</button>`:q?`<div class="qty"><button onclick="dec('${esc(p.id)}')" aria-label="Moins de ${esc(p.nom)}">−</button><b aria-live="polite">${q}</b><button onclick="inc('${esc(p.id)}')" aria-label="Plus de ${esc(p.nom)}">+</button></div>`:`<button class="add" onclick="inc('${esc(p.id)}')">+ ${t('Ajouter')}</button>`}
+    <div class="cf"><span class="price">${prixTxt(p)}</span>
+     ${out?`<button class="add" disabled>${t('Épuisé')}</button>`:T?`<button class="add" onclick="choisir('${esc(p.id)}')">${q?q+' · ':'+ '}${t('Choisir')}</button>`:q?`<div class="qty"><button onclick="dec('${esc(p.id)}')" aria-label="Moins de ${esc(p.nom)}">−</button><b aria-live="polite">${q}</b><button onclick="inc('${esc(p.id)}')" aria-label="Plus de ${esc(p.nom)}">+</button></div>`:`<button class="add" onclick="inc('${esc(p.id)}')">+ ${t('Ajouter')}</button>`}
     </div></div></article>`}
 function sections(){const wd=new Date().getDay(),P=R.plats||[];const S=[];
   const jour=P.filter(p=>Array.isArray(p.jours)&&p.jours.includes(wd)&&p.dispo!==false);
@@ -268,7 +287,7 @@ function vitBind(){const sl=$('slides'),n=vitPh().length;if(!sl||n<2)return;if(v
   sl.addEventListener('scroll',()=>{clearTimeout(sl._t);sl._t=setTimeout(mark,80)});sl.addEventListener('touchstart',()=>{vitTouch=Date.now()},{passive:true});
   if(!vitTimer)vitTimer=setInterval(()=>{const s=$('slides'),k=vitPh().length;if(!s||k<2||document.hidden||Date.now()-vitTouch<8000)return;s.scrollTo({left:((vitCur+1)%k)*s.clientWidth,behavior:'smooth'})},4500)}
 function goCat(id){catOn=id;document.querySelectorAll('.cat').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick')===`goCat('${id}')`));const e=$('s_'+id);if(e)e.scrollIntoView({behavior:'smooth',block:'start'})}
-function inc(id){const p=plat(id);if(!p||p.dispo===false)return;cart[id]=Math.min(50,(cart[id]||0)+1);sent=false;saveCart();keepScroll(render)}
+function inc(id){const c=cI(id);if(!c||c.p.dispo===false)return;cart[id]=Math.min(50,(cart[id]||0)+1);sent=false;saveCart();keepScroll(render)}
 function dec(id){cart[id]=Math.max(0,(cart[id]||0)-1);if(!cart[id])delete cart[id];saveCart();keepScroll(render)}
 function keepScroll(fn){const y=window.scrollY,st=[...document.querySelectorAll('.strip')].map(s=>s.scrollLeft);fn();window.scrollTo(0,y);document.querySelectorAll('.strip').forEach((s,i)=>{if(st[i])s.scrollLeft=st[i]})}
 
@@ -280,7 +299,7 @@ function rd(){['zone','adr','heure','date','pers','nom','tel','note'].forEach(k=
 function drawOrder(){const L=lines(),sv=services(),Z=zones(),sh=$('sheet');if(!sh)return;
   const nd=new Date(),today=nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-'+String(nd.getDate()).padStart(2,'0');
   sh.innerHTML=`<div class="sh"><h2>${t('Ma commande')}</h2><button class="x" onclick="closeOrder()">${t('Fermer')}</button></div>
-  <div class="box">${L.length?L.map(l=>`<div class="line"><div class="g"><b>${esc(l.p.nom)}</b><div class="muted">${F(l.p.prix)}</div></div><div class="qty"><button onclick="dec('${esc(l.p.id)}')" aria-label="Moins">−</button><b>${l.q}</b><button onclick="inc('${esc(l.p.id)}')" aria-label="Plus">+</button></div></div>`).join(''):`<div class="muted">${t('Votre panier est vide.')}</div>`}
+  <div class="box">${L.length?L.map(l=>`<div class="line"><div class="g"><b>${esc(l.nom)}</b><div class="muted">${F(l.prix)}</div></div><div class="qty"><button onclick="dec(decodeURIComponent('${encK(l.key)}'));drawOrder()" aria-label="Moins">−</button><b>${l.q}</b><button onclick="inc(decodeURIComponent('${encK(l.key)}'));drawOrder()" aria-label="Plus">+</button></div></div>`).join(''):`<div class="muted">${t('Votre panier est vide.')}</div>`}
    ${L.length?`<button class="x" style="align-self:flex-start" onclick="cart={};saveCart();drawOrder()">${t('Vider')}</button>`:''}</div>
   <div class="box"><b>${t('Comment voulez-vous votre repas ?')}</b>
    <div class="modes">${sv.map(([k,l])=>`<button class="mode ${mode===k?'on':''}" onclick="rd();mode='${k}';saveCart();drawOrder()" aria-pressed="${mode===k}">${t(l)}</button>`).join('')}</div>
@@ -315,7 +334,7 @@ function message(){const L=lines(),M={livraison:'Livraison',emporter:'À emporte
   const fd=d=>d?d.split('-').reverse().join('/'):'';
   const out=[`Bonjour ${R.nom||''} 👋`,mode==='place'&&!L.length?'*Réservation de table* (depuis votre page)':'*Nouvelle commande* (depuis votre page)',''];
   out.push(`📍 ${M}`+(mode==='livraison'&&z?` – ${z.nom}`:''));
-  if(L.length){out.push('');L.forEach(l=>out.push(`${l.q} × ${l.p.nom} — ${F(l.p.prix*l.q)}`))}
+  if(L.length){out.push('');L.forEach(l=>out.push(`${l.q} × ${l.nom} — ${F(l.prix*l.q)}`))}
   if(mode==='livraison')out.push(`Livraison : ${z?F(z.prix):'à confirmer'}`);
   if(L.length)out.push(`*TOTAL : ${F(subTot()+frais())}*${mode==='livraison'&&!z?' + livraison':''}`);
   out.push('');out.push(`Nom : ${o.nom.trim()}`);if(o.tel.trim())out.push(`Tél : ${o.tel.trim()}`);
@@ -336,7 +355,7 @@ let LAST=store('trm.last.'+(CODE||'DEMO')),stT=null;
 function newId(){try{return crypto.randomUUID()}catch(e){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})}}
 function envoyerCaisse(){const L=lines(),z=zones().find(z=>z.nom===o.zone);
   const d={mode,nom:o.nom.trim(),tel:o.tel.trim(),zone:mode==='livraison'&&z?z.nom:'',adr:mode==='livraison'?o.adr.trim():'',heure:o.heure||'',date:mode==='place'?o.date:'',pers:mode==='place'?Math.max(1,+o.pers||1):0,
-    frais:mode==='livraison'?frais():0,note:o.note.trim(),items:L.map(l=>({pid:l.p.id,nom:l.p.nom,prix:l.p.prix,q:l.q}))};
+    frais:mode==='livraison'?frais():0,note:o.note.trim(),items:L.map(l=>({pid:l.p.id,nom:l.nom,prix:l.prix,q:l.q,...(l.tl?{t:l.tl}:{})}))};
   const id=newId();LAST={id,at:Date.now(),st:IS_DEMO?'demo':'envoi',n:null};store('trm.last.'+(CODE||'DEMO'),LAST);
   if(IS_DEMO)return;
   try{fetch(SUPA_URL+'/rest/v1/rpc/resto_web_order',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',apikey:SUPA_KEY},body:JSON.stringify({p_code:CODE,p_id:id,p_data:d})})
