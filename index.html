@@ -220,6 +220,32 @@ body.nonav{padding-bottom:24px}
 .k-card .num{font-family:var(--f-display);font-weight:800;font-size:26px}
 .k-card .age{font-weight:700}
 .k-card .age.late{color:var(--bad)}
+.k-card.late{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,var(--surface))}
+/* Grand écran (ordinateur, tablette en paysage) : la cuisine s'agrandit toute seule */
+@media (min-width:1100px){.k-grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}.k-card .it{font-size:22px}.k-card .num{font-size:30px}.k-card .age{font-size:19px}}
+/* Mode TV : seulement pour regarder, très grand, lisible de loin */
+.tvbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tvbar .tvt{flex:1;min-width:0}
+.tvsnd{background:var(--warn-soft);color:var(--warn);font-weight:800;border-radius:999px;padding:6px 14px}
+body.tv{padding-bottom:0}
+body.tv .top,body.tv .nav{display:none!important}
+body.tv main{max-width:none;padding:1.2vw 1.6vw;gap:1.2vw}
+body.tv .tvbar{gap:1.5vw}
+body.tv .tvbar h2{font-size:clamp(28px,3vw,72px);color:var(--bissap)}
+body.tv .tvbar .tvc{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,2.6vw,64px)}
+body.tv .tvbar .tvn{font-family:var(--f-display);font-weight:800;font-size:clamp(20px,1.8vw,44px);background:var(--warn);color:#fff;border-radius:999px;padding:.15em .7em}
+body.tv .tvbar .btn,body.tv .tvsnd{font-size:clamp(14px,1.1vw,26px)}
+body.tv .k-grid{grid-template-columns:repeat(auto-fill,minmax(max(280px,23vw),1fr));gap:1.2vw}
+body.tv .k-card{border-width:5px;border-radius:1.2vw;padding:1.3vw;gap:.6vw}
+body.tv .k-card .num{font-size:clamp(34px,3.6vw,90px)}
+body.tv .k-card .age{font-size:clamp(22px,2vw,52px)}
+body.tv .k-card .it{font-size:clamp(24px,2.2vw,58px);line-height:1.2}
+body.tv .k-card .tag{font-size:clamp(16px,1.4vw,36px);padding:.25em .8em}
+body.tv .k-card .kbtn{display:none}
+body.tv .empty{font-size:clamp(24px,2.6vw,64px);padding:12vh 2vw}
+body.tv .pretbox{width:min(1100px,80vw)}
+body.tv .pret .big{font-size:clamp(28px,3vw,72px)}
+body.tv .pret .sm{font-size:clamp(18px,1.6vw,40px)}
 #print{display:none}
 @media print{
   @page{size:58mm auto;margin:2mm}
@@ -420,7 +446,7 @@ function parler(txt){try{if(!window.speechSynthesis)return;speechSynthesis.cance
 function bandeau(html,col){const w=document.getElementById('pretWrap');if(!w.firstChild){w.innerHTML='<div class="pretbox"></div>'}
   const box=w.firstChild,el=document.createElement('div');el.className='pret';el.style.background=col;el.setAttribute('role','alert');
   el.innerHTML=html+'<button>OK</button>';el.querySelector('button').style.color=col;
-  const close=()=>{el.remove();if(!box.children.length)w.innerHTML=''};el.querySelector('button').onclick=close;setTimeout(close,60000);box.prepend(el);if(voixOn)ding()}
+  const close=()=>{el.remove();if(!box.children.length)w.innerHTML=''};el.querySelector('button').onclick=close;setTimeout(close,document.body.classList.contains('tv')?25000:60000);box.prepend(el);if(voixOn)ding()}
 function ouTxt(o){return o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison':'À emporter'}
 function annonceCuisine(o,ajout){if(!me)return;const estCuisine=me.role==='cuisine'||tab==='cuisine';if(!estCuisine)return;
   if(!ajout&&Date.now()-new Date(o.date).getTime()>10*60000)return;
@@ -504,8 +530,9 @@ const has=f=>(FORMULES[S.set.formule]||FORMULES.essentiel).feat.includes(f);
 const roleOk=r=>r==='patron'||r!=='livreur'&&r!=='autre'&&(FORMULES[S.set.formule]||FORMULES.essentiel).roles.includes(r);
 const ME_KEY='terangaResto_me';
 let me=null;
+function tvStart(){if(tvOn&&me&&(me.role==='cuisine'||me.role==='caissier'||me.role==='patron'))tab='cuisine'}
 function loadMe(){try{me=JSON.parse(localStorage.getItem(ME_KEY)||'null')}catch(e){me=null}
-  if(me&&me.role!=='patron'){const s=S.staff.find(x=>x.id===me.id);if(!s||s.role!==me.role||!roleOk(s.role))me=null}}
+  if(me&&me.role!=='patron'){const s=S.staff.find(x=>x.id===me.id);if(!s||s.role!==me.role||!roleOk(s.role))me=null}tvStart()}
 function setMe(m){me=m;try{m?localStorage.setItem(ME_KEY,JSON.stringify(m)):localStorage.removeItem(ME_KEY)}catch(e){}}
 const isP=()=>me&&me.role==='patron';
 
@@ -518,7 +545,7 @@ const WO={
  'payer après':'fey ginnaaw','Mixte, dette, abonné…':'Ñaar, bor, abonne…','Le client donne…':'Kiliyaan bi jox na…','Compte juste':'Xaalis bu mat',
  'Autre montant':'Beneen xaalis','Valider':'Dëggal','Payer plus tard':'Fey ginnaaw','Plus tard':'Ginnaaw',
  'Écrivez combien le client paie avec chaque moyen.':'Bindal ñaata la kiliyaan bi di fey ci benn-benn.',
- 'Mise à jour automatique':'Dafay yeesal boppam','Aucune commande à préparer.':'Amul komand buñuy togg.','Écran cuisine':'Ekraanu waañ',
+ 'Mise à jour automatique':'Dafay yeesal boppam','Aucune commande à préparer.':'Amul komand buñuy togg.','Écran cuisine':'Ekraanu waañ','Quitter TV':'Génn TV','en cours':'ñu ngi ci',
  'En cours':'Ñu ngi ci','Toutes aujourd\'hui':'Lépp tey','Aucune commande en cours.':'Amul komand leegi.',
  'Changer':'Soppi','Choisir':'Tànn','WhatsApp livreur':'WhatsApp yóbbalkat','Pas encore de livreur':'Amagul yóbbalkat','Livrée':'Yóbbu nañu',
  'Ajouter des plats':'Yokk lekk','Ajout':'Yokk','Ajouter et envoyer en cuisine':'Yokk te yónnee ko waañ wi','Annuler l\'ajout':'Neenal yokk bi',
@@ -593,6 +620,7 @@ function render(){
   document.getElementById('syncDot').hidden=DEMO||MODE!=='app';setSyncSt(syncSt||'ok');
   if(MODE==='boot'||MODE==='account'){nav.hidden=true;document.body.classList.add('nonav');document.getElementById('outBtn').hidden=true;document.getElementById('view').innerHTML=MODE==='boot'?vBoot():vAccount();return}
   if(abState().st==='blocked'){nav.hidden=true;document.body.classList.add('nonav');document.getElementById('view').innerHTML=vBlocked();return}
+  document.body.classList.remove('tv');
   if(!me){nav.hidden=true;document.body.classList.add('nonav');document.getElementById('view').innerHTML=(DEMO?demoBar():'')+vLock();return}
   const T=tabsFor();
   if(!T.some(([k])=>k===tab)&&!(tab==='cuisine'&&isP()&&has('cuisine')))tab=T[0][0];
@@ -603,7 +631,8 @@ function render(){
   nav.innerHTML=T.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${IC[k]}${t(l)}${(k==='commandes'||k==='cuisine')&&enc?` (${enc})`:''}${k==='commandes'&&webVoit()&&WEB.length?` <span class="wbadge">🌐 ${WEB.length}</span>`:''}</button>`).join('');
   const V={caisse:vCaisse,commandes:vCommandes,menu:vMenu,argent:vArgent,plus:vPlus,cuisine:vCuisine}[tab];
   document.body.classList.toggle('nonav',T.length<2);
-  document.getElementById('view').innerHTML=(DEMO?demoBar():'')+abBanner()+(S.exemple&&isP()?bannerEx():'')+V();
+  const tv=tvActif();document.body.classList.toggle('tv',tv);if(tv)tvWake();
+  document.getElementById('view').innerHTML=(tv?'':(DEMO?demoBar():''))+abBanner()+(S.exemple&&isP()&&!tv?bannerEx():'')+V();
 }
 function demoBar(){return `<div class="banner" style="flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap"><span><b>Démo</b> · rien n'est envoyé en ligne</span><button class="btn sm" onclick="exitDemo()">Créer un compte / se connecter</button></div>`}
 function bannerEx(){return`<div class="banner"><div><b>Données d'exemple.</b> Les commandes, clients et l'équipe marqués « exemple » servent à voir comment marche l'application. Pour essayer les autres écrans, touchez « Sortir » et entrez un code : caissier 1234, cuisine 1111, serveur 3333.</div><button class="btn sm" onclick="clearEx()">Effacer les exemples et commencer</button></div>`}
@@ -789,15 +818,30 @@ function ageMin(o){return Math.floor((Date.now()-new Date(o.cuisineDate||o.date)
 function vCuisine(){
   const L=todayOrders().filter(o=>!o.annule&&o.statut==='cuisine').sort((a,b)=>a.n-b.n);
   const TY={place:'Sur place',emporter:'À emporter',livraison:'Livraison'};
-  return `${isP()?`<div class="row"><button class="btn sm ghost" onclick="go('commandes')">← Commandes</button></div>`:''}<div class="row between"><h2>${t('Cuisine')}</h2><span class="muted">${t('Mise à jour automatique')}</span></div>
-  <div class="k-grid">${L.map(o=>{const a=ageMin(o),KI=o.cuisineItems||o.items,KN=o.cuisineItems?o.cuisineNote:o.note;return `<article class="k-card ${o.statut}">
+  const tv=tvActif(),h=new Date();
+  const head=tv?`<div class="tvbar"><div class="tvt"><h2>${esc(S.set.nom||'Teranga Resto')} · ${t('Cuisine')}</h2></div>${audioOk()?'':`<span class="tvsnd">🔈 ${t('Touchez l\'écran une fois pour activer le son')}</span>`}<span class="tvn">${L.length} ${t('en cours')}</span><span class="tvc">${pad(h.getHours())}:${pad(h.getMinutes())}</span><button class="btn sm ghost" onclick="tvSet(false)">✕ ${t('Quitter TV')}</button></div>`
+   :`${isP()?`<div class="row"><button class="btn sm ghost" onclick="go('commandes')">← Commandes</button></div>`:''}<div class="row between"><h2>${t('Cuisine')}</h2><div class="row"><span class="muted">${t('Mise à jour automatique')}</span><button class="btn sm alt" onclick="tvSet(true)">📺 ${t('Mode TV')}</button></div></div>`;
+  return `${head}
+  <div class="k-grid">${L.map(o=>{const a=ageMin(o),KI=o.cuisineItems||o.items,KN=o.cuisineItems?o.cuisineNote:o.note;return `<article class="k-card ${o.statut}${a>=20?' late':''}">
     <div class="row between"><span class="num">n°${o.n}</span><span class="age ${a>=20&&o.statut==='cuisine'?'late':''}">${a} min</span></div>
     <div><span class="tag t-neutre">${t(TY[o.type])}${o.table?' · '+t('Table')+' '+esc(o.table):''}</span> ${o.cuisineItems?`<span class="tag t-du">${t('Ajout').toUpperCase()}</span>`:''}</div>
     ${KI.map(i=>`<div class="it">${i.q} × ${esc(i.nom)}</div>`).join('')}
     ${KN?`<div class="it" style="color:var(--bad)">⚠ ${esc(KN)}</div>`:''}
-    <button class="btn ok full" style="min-height:58px;font-size:19px" onclick="kPrete('${o.id}')">${t('Prête')} ✓</button>
+    <button class="btn ok full kbtn" style="min-height:58px;font-size:19px" onclick="kPrete('${o.id}')">${t('Prête')} ✓</button>
   </article>`}).join('')||`<div class="empty">${t('Aucune commande à préparer.')}</div>`}</div>`;
 }
+/* ---------- Mode TV (la TV regarde, le tablette/téléphone appuie « Prête ») ---------- */
+let tvOn=(()=>{try{return localStorage.getItem('terangaResto_tv')==='on'}catch(e){return false}})(),wakeLk=null;
+function tvActif(){return tvOn&&!!me&&tab==='cuisine'}
+function audioOk(){return !!(audioCtx&&audioCtx.state==='running')}
+async function tvWake(){try{if(tvActif()&&navigator.wakeLock&&!wakeLk&&document.visibilityState==='visible'){wakeLk=await navigator.wakeLock.request('screen');wakeLk.addEventListener('release',()=>{wakeLk=null})}}catch(e){}}
+function tvSet(on){tvOn=on;try{localStorage.setItem('terangaResto_tv',on?'on':'off')}catch(e){}
+  if(on){unlockAudio();try{const d=document.documentElement;(d.requestFullscreen||d.webkitRequestFullscreen||function(){}).call(d)}catch(e){}tvWake()}
+  else{try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}try{if(wakeLk)wakeLk.release()}catch(e){}wakeLk=null}
+  render();window.scrollTo(0,0)}
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{unlockAudio();if(tvActif())setTimeout(()=>{softRender();tvWake()},400)},{passive:true}));
+document.addEventListener('visibilitychange',tvWake);
+setInterval(()=>{if(tvActif())softRender()},30000);
 
 /* ---------- Paiement ---------- */
 let pay={};
