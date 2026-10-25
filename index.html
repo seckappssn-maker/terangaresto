@@ -294,12 +294,12 @@ const F=n=>Math.round(n||0).toLocaleString('fr-FR').replace(/ | /g,' ')+' F';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const JOURS=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const JOURS_WO=['Dibéer','Altine','Talaata','Àllarba','Alxames','Àjjuma','Gaawu'];
-const CATS=['Plats','Petit-déjeuner','Grillades','Boissons','Desserts'];
+const CATS=['Plats','Fast-food','Petit-déjeuner','Grillades','Boissons','Desserts'];
 /* Catégories qui ne vont pas en cuisine (choix de chaque restaurant, par défaut tout va en cuisine) */
 function horsC(){return Array.isArray(S.set.horsCuisine)?S.set.horsCuisine:[]}
 function enCuis(it){const p=S.plats.find(x=>x.id===it.pid);return !p||!horsC().includes(p.cat)}
 function kItems(o){return (o.cuisineItems||o.items||[]).filter(enCuis)}
-const CAT_COL={'Rapide':'#13222C','Plats':'#2E7D4F','Petit-déjeuner':'#B4610F','Grillades':'#B3261E','Boissons':'#1565C0','Desserts':'#7B3FA0'};
+const CAT_COL={'Rapide':'#13222C','Plats':'#2E7D4F','Fast-food':'#C2410C','Petit-déjeuner':'#B4610F','Grillades':'#B3261E','Boissons':'#1565C0','Desserts':'#7B3FA0'};
 const catCol=c=>CAT_COL[c]||'#155E83';
 let caisseVue=(()=>{try{return localStorage.getItem('terangaResto_vue')||'boutons'}catch(e){return 'boutons'}})();
 function setVue(v){caisseVue=v;try{localStorage.setItem('terangaResto_vue',v)}catch(e){}render()}
@@ -311,6 +311,7 @@ const mName=m=>t(MODES[m]||m);
 function seed(){
   const now=new Date(), t=dk(now);
   const P=(nom,prix,cat,jours=[])=>({id:uid(),nom,prix,cat,dispo:true,jours});
+  const PT=(nom,tl,cat)=>({...P(nom,Math.min(...tl.map(x=>x[1])),cat),tailles:tl.map(([n,p])=>({n,p}))});
   const plats=[
     P('Thiéboudienne (ceebu jën)',2000,'Plats',[1,3,6]),
     P('Thiébou yapp',2000,'Plats',[2]),
@@ -331,7 +332,12 @@ function seed(){
     P('Gingembre',300,'Boissons'),
     P('Eau Kirène',300,'Boissons'),
     P('Thiakry',500,'Desserts'),
-    P('Fondé',500,'Desserts')];
+    P('Fondé',500,'Desserts'),
+    PT('Hamburger',[['Simple',2000],['Double',3000]],'Fast-food'),
+    PT('Chawarma',[['Petit',1000],['Grand',1500]],'Fast-food'),
+    PT('Tacos',[['Moyen',2500],['Grand',3500]],'Fast-food'),
+    PT('Pizza',[['Moyenne',4000],['Grande',6000]],'Fast-food'),
+    P('Frites',1000,'Fast-food')];
   const it=(i,q)=>({pid:plats[i].id,nom:plats[i].nom,prix:plats[i].prix,q});
   const at=h=>{const d=new Date(now);d.setHours(h,Math.floor(Math.random()*50),0,0);return d.toISOString()};
   const c1={id:uid(),nom:'Moussa Diop (exemple)',tel:'770000001',quartier:'Parcelles U17',paiements:[]};
@@ -544,7 +550,7 @@ const isP=()=>me&&me.role==='patron';
 const WO={
  'Caisse':'Kees','Cuisine':'Waañ',
  'Entrez votre code':'Bindal sa kood','Code incorrect':'Kood bi baaxul','Sortir':'Génn','Patron':'Boroom','Caissier':'Kees','Serveur':'Serwëër',
- 'Rapide':'Gaaw','Plats':'Lekk yi','Petit-déjeuner':'Ndekki','Grillades':'Lekk bu ñu lakk','Boissons':'Naan yi','Desserts':'Dessert yi',
+ 'Rapide':'Gaaw','Plats':'Lekk yi','Fast-food':'Fast-food','Petit-déjeuner':'Ndekki','Grillades':'Lekk bu ñu lakk','Boissons':'Naan yi','Desserts':'Dessert yi',
  'Espèces':'Xaalis loxo','Espèces + Wave/OM':'Xaalis loxo + Wave/OM','Crédit (dette)':'Bor','Abonnement':'Abonne',
  'payer après':'fey ginnaaw','Mixte, dette, abonné…':'Ñaar, bor, abonne…','Le client donne…':'Kiliyaan bi jox na…','Compte juste':'Xaalis bu mat',
  'Autre montant':'Beneen xaalis','Valider':'Dëggal','Payer plus tard':'Fey ginnaaw','Plus tard':'Ginnaaw',

@@ -136,7 +136,7 @@ input,select,textarea{border:1.5px solid var(--line);border-radius:12px;padding:
 <script>
 const SUPA_URL='https://ncsjgmkrsvtwklfrdbgy.supabase.co';
 const SUPA_KEY='sb_publishable_oDE4BbU6J3RTnce1Oo91cQ_hokWgh0U';
-const CATS=['Plats','Petit-déjeuner','Grillades','Boissons','Desserts'];
+const CATS=['Plats','Fast-food','Petit-déjeuner','Grillades','Boissons','Desserts'];
 const JOURS=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const F=n=>Math.round(+n||0).toLocaleString('fr-FR').replace(/ | /g,' ')+' F';
@@ -180,6 +180,8 @@ function demoData(){const wd=new Date().getDay();
     {id:'d2',nom:'Yassa poulet',prix:2000,cat:'Plats',dispo:true,desc:'Poulet mariné au citron et oignons, riz blanc.',jours:[],photos:[ill('#F0E1B8','#F4F1E6','#E3B23C','#6B8E23'),ill('#E9D6A8','#F4F1E6','#C98A1E','#E3B23C')]},
     {id:'d3',nom:'Mafé',prix:1500,cat:'Plats',dispo:true,desc:'Sauce arachide, viande de bœuf, riz.',tailles:[{n:'Petit',p:1500},{n:'Grand',p:2500},{n:'Familial',p:6000}],jours:[],photos:[ill('#E8CDB0','#9C5A2B','#6B3A1C','#C2853B')]},
     {id:'d4',nom:'Soupou kandja',prix:2000,cat:'Plats',dispo:false,desc:'Sauce gombo, poisson et fruits de mer.',jours:[],photos:[ill('#D9E2C3','#5E7A2B','#8C3B1B','#3B5A1A')]},
+    {id:'d10',nom:'Hamburger',prix:2000,cat:'Fast-food',dispo:true,desc:'Steak haché, fromage, salade, tomate et frites.',tailles:[{n:'Simple',p:2000},{n:'Double',p:3000}],jours:[],photos:[]},
+    {id:'d11',nom:'Chawarma',prix:1000,cat:'Fast-food',dispo:true,desc:'Poulet grillé, frites et sauce maison dans un pain libanais.',tailles:[{n:'Petit',p:1000},{n:'Grand',p:1500}],jours:[],photos:[]},
     {id:'d5',nom:'Pain omelette',prix:500,cat:'Petit-déjeuner',dispo:true,desc:'Pain frais, omelette, oignons.',jours:[],photos:[]},
     {id:'d6',nom:'Dibi agneau (½ kg)',prix:4000,cat:'Grillades',dispo:true,desc:'Agneau grillé au feu de bois, oignons et moutarde.',jours:[],photos:[ill('#E6CFC0','#7A3A22','#B8562B','#F2C14E')]},
     {id:'d7',nom:'Bissap',prix:300,cat:'Boissons',dispo:true,desc:'Jus de fleurs d\'hibiscus, bien frais.',jours:[],photos:[cup('#F3D3DC','#9B1D3D')]},
