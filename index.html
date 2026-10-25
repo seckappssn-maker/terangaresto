@@ -1300,7 +1300,7 @@ function vReglages(){const s=S.set;
    <label class="f">Remettre une sauvegarde (collez le texte)<textarea id="g_imp" rows="3"></textarea></label>
    <button class="btn ghost" onclick="impData()">Remettre les données</button></section>`}
 function abCard(){const a=abState(),f=FORMULES[S.set.formule]||FORMULES.premium;
-  return `<section class="card"><div class="lbl">Abonnement</div>
+  return `<section class="card" id="abCard" style="scroll-margin-top:96px"><div class="lbl">Abonnement</div>
    <div class="row between"><b>Formule ${f.nom}</b><span class="tag ${a.st==='ok'?'t-paye':'t-du'}">${a.trial?'Essai gratuit':'Payé'} · ${a.left>=0?a.left+' j':'expiré'}</span></div>
    <div class="muted">${a.trial?'Essai gratuit':'Payé'} jusqu'au <b>${fdate(a.end)}</b> · ${F(abPrix())} / mois</div>
    <div>Pour payer : envoyez ${F(abPrix())} par Wave ou Orange Money au <b>${esc(PAY_NUM)}</b>, puis touchez « Vérifier ».</div>
@@ -1461,7 +1461,7 @@ function vBlocked(){const a=abState();
    <div class="muted" style="font-size:14px">Vos données sont gardées. Tout revient dès que le paiement est enregistré.</div></section>`}
 async function checkAb(){await fetchAb();const a=abState();render();toast(a.st==='blocked'?'Paiement pas encore enregistré':'Abonnement actif jusqu\'au '+fdate(a.end))}
 function abBanner(){const a=abState();if(DEMO||!AB||a.st==='ok'||!me||!(isP()||me.role==='caissier'))return'';
-  return `<div class="banner" style="${a.st==='grace'?'border-color:var(--bad);background:var(--bad-soft)':''}"><div>${a.st==='grace'?`<b>Abonnement expiré le ${fdate(a.end)}.</b> L'app sera bloquée dans ${GRACE+a.left} jour(s).`:a.trial?`<b>Essai gratuit :</b> encore ${a.left} jour(s), jusqu'au ${fdate(a.end)}.`:`<b>Abonnement :</b> fin dans ${a.left} jour(s), le ${fdate(a.end)}.`} Payez ${F(abPrix())} par Wave ou Orange Money au ${esc(PAY_NUM)}.</div>${isP()?`<button class="btn sm" onclick="tab='plus';sub='reglages';render()">Voir mon abonnement</button>`:''}</div>`}
+  return `<div class="banner" style="${a.st==='grace'?'border-color:var(--bad);background:var(--bad-soft)':''}"><div>${a.st==='grace'?`<b>Abonnement expiré le ${fdate(a.end)}.</b> L'app sera bloquée dans ${GRACE+a.left} jour(s).`:a.trial?`<b>Essai gratuit :</b> encore ${a.left} jour(s), jusqu'au ${fdate(a.end)}.`:`<b>Abonnement :</b> fin dans ${a.left} jour(s), le ${fdate(a.end)}.`} Payez ${F(abPrix())} par Wave ou Orange Money au ${esc(PAY_NUM)}.</div>${isP()?`<button class="btn sm" onclick="tab='plus';sub='reglages';render();setTimeout(()=>{const e=document.getElementById('abCard');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},60)">Voir mon abonnement</button>`:''}</div>`}
 
 async function boot(){
   let mode='';try{mode=localStorage.getItem(MODE_KEY)||''}catch(e){}
