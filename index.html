@@ -223,6 +223,40 @@ body.nonav{padding-bottom:24px}
 .k-card.late{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,var(--surface))}
 /* Grand écran (ordinateur, tablette en paysage) : la cuisine s'agrandit toute seule */
 @media (min-width:1100px){.k-grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}.k-card .it{font-size:22px}.k-card .num{font-size:30px}.k-card .age{font-size:19px}}
+/* Écran clients : numéros en préparation / prêts, pour une TV ou un téléphone tourné vers les clients */
+.ecr{position:fixed;inset:0;z-index:30;display:grid;grid-template-rows:auto 1fr auto;gap:2vmin;padding:2.4vmin 3vmin;color:#fff;overflow:hidden;
+  background:radial-gradient(ellipse 60% 50% at 85% 10%,#1E7FD833,transparent 70%),radial-gradient(ellipse 50% 45% at 10% 95%,#E07B0E26,transparent 70%),#0B1620;font-family:system-ui,sans-serif}
+.ecr *{box-sizing:border-box}
+.ecr-h{display:flex;align-items:center;gap:2vmin}
+.ecr-h h1{flex:1;min-width:0;font-family:var(--f-display);font-size:clamp(24px,5vmin,76px);line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
+.ecr-h h1 small{display:block;font-size:.38em;font-weight:600;color:#9FB3C2;letter-spacing:.14em;text-transform:uppercase;margin-top:.5vmin}
+.ecr-clk{font-family:var(--f-display);font-weight:800;font-size:clamp(22px,4.6vmin,70px);color:#CFE3F1}
+.ecr-x{background:none;border:1px solid #ffffff26;color:#ffffff80;border-radius:999px;padding:6px 14px;font-size:14px;cursor:pointer}
+.ecr-snd{background:#E07B0E;color:#fff;border:0;border-radius:999px;padding:8px 16px;font-weight:800;font-size:clamp(13px,1.8vmin,22px);cursor:pointer}
+.ecr-b{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr);gap:2.4vmin;min-height:0}
+.ecr-p{border-radius:3vmin;padding:2.4vmin;display:flex;flex-direction:column;gap:2vmin;min-height:0;overflow:hidden}
+.ecr-p h2{font-family:var(--f-display);font-size:clamp(20px,4.2vmin,64px);display:flex;align-items:center;gap:1.4vmin;line-height:1.05}
+.ecr-p h2 i{font-style:normal;font-size:.5em;font-weight:700;opacity:.75;letter-spacing:.04em}
+.ecr-prep{background:#16232E;border:2px solid #E07B0E55}
+.ecr-prep h2{color:#F5A54A}
+.ecr-rdy{background:linear-gradient(160deg,#103A26,#0E2A1E);border:2px solid #34C77B66}
+.ecr-rdy h2{color:#5BE29A}
+.ecr-g{display:flex;flex-wrap:wrap;gap:1.6vmin;align-content:flex-start;overflow:hidden}
+.ecr-n{font-family:var(--f-display);font-weight:800;line-height:1;border-radius:2vmin;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ecr-n small{font-family:system-ui,sans-serif;font-weight:600;font-size:.3em;opacity:.8;margin-top:.4em;max-width:7em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ecr-prep .ecr-n{font-size:clamp(28px,6.4vmin,104px);min-width:2.2em;padding:.22em .3em;background:#0E1A23;border:2px solid #E07B0E77;color:#FFD9AE}
+.ecr-rdy .ecr-n{font-size:clamp(32px,7.4vmin,118px);min-width:2.2em;padding:.22em .3em;background:#34C77B;color:#062615}
+.ecr-hero{display:flex;align-items:center;gap:3vmin;background:#34C77B;color:#062615;border-radius:3vmin;padding:2vmin 3.4vmin}
+.ecr-hero .ecr-n{background:none;padding:0;font-size:clamp(64px,17vmin,260px);min-width:0}
+.ecr-hero .ecr-t{font-family:var(--f-display);font-weight:800;font-size:clamp(20px,4.4vmin,66px);line-height:1.05}
+.ecr-hero .ecr-t small{display:block;font-family:system-ui,sans-serif;font-weight:600;font-size:.5em;opacity:.8;margin-top:.3em}
+.ecr-new{animation:ecrPulse 1.1s ease-in-out infinite alternate}
+@keyframes ecrPulse{from{box-shadow:0 0 0 0 #5BE29A00;transform:scale(1)}to{box-shadow:0 0 0 1.6vmin #5BE29A55;transform:scale(1.02)}}
+@media (prefers-reduced-motion:reduce){.ecr-new{animation:none}}
+.ecr-vide{color:#8FA3B3;font-size:clamp(16px,2.8vmin,40px);font-weight:600}
+.ecr-f{text-align:center;color:#9FB3C2;font-size:clamp(14px,2.6vmin,38px);font-weight:600}
+.ecr-f b{color:#fff}
+@media (orientation:portrait){.ecr-b{grid-template-columns:1fr;grid-template-rows:minmax(0,1.35fr) minmax(0,1fr)}.ecr-rdy{order:-1}}
 /* Mode TV : seulement pour regarder, très grand, lisible de loin */
 .tvbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .tvbar .tvt{flex:1;min-width:0}
@@ -438,7 +472,7 @@ async function pull(full){if(DEMO||!SB||!USER)return false;let changed=false,max
   lastPull=maxT;if(changed){migrate();prune()}writeCache();return changed}
 async function sync(full){if(DEMO||!SB||!USER||syncing)return;syncing=true;let ch=false;
   try{if(full){ch=await pull(true);await push()}else{await push();ch=await pull(false)}if(syncSt!=='err')setSyncSt('ok')}catch(e){setSyncSt('err',e)}finally{syncing=false}
-  if(ch||tab==='cuisine')softRender();
+  if(ch||tab==='cuisine'||tab==='ecran')softRender();
   if(full){pretQueue=[];cuisQueue=[]}
   if(pretQueue.length){const q=pretQueue.splice(0);q.forEach(annoncePrete)}
   if(cuisQueue.length){const q=cuisQueue.splice(0);q.forEach(([o,aj])=>annonceCuisine(o,aj))}
@@ -458,12 +492,12 @@ function bandeau(html,col){const w=document.getElementById('pretWrap');if(!w.fir
   el.innerHTML=html+'<button>OK</button>';el.querySelector('button').style.color=col;
   const close=()=>{el.remove();if(!box.children.length)w.innerHTML=''};el.querySelector('button').onclick=close;setTimeout(close,document.body.classList.contains('tv')?25000:60000);box.prepend(el);if(voixOn)ding()}
 function ouTxt(o){return o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison':'À emporter'}
-function annonceCuisine(o,ajout){if(!me)return;const estCuisine=me.role==='cuisine'||tab==='cuisine';if(!estCuisine)return;
+function annonceCuisine(o,ajout){if(!me)return;const estCuisine=me.role==='cuisine'||tab==='cuisine';if(!estCuisine||tab==='ecran')return;
   if(!ajout&&Date.now()-new Date(o.date).getTime()>10*60000)return;
   const KI=kItems(o);if(!KI.length)return;
   bandeau(`<div><div class="big">🔥 ${ajout?t('Ajout')+' · n°'+o.n:'Nouvelle commande n°'+o.n}</div><div class="sm">${esc(ouTxt(o))}${o.par?' · '+esc(o.par):''} · ${KI.map(i=>i.q+' × '+esc(i.nom)).join(', ')}</div></div>`,'#E07B0E');
   if(voixOn)setTimeout(()=>parler((ajout?'Ajout pour la commande numéro ':'Nouvelle commande, numéro ')+o.n+'. '+ouTxt(o)),700)}
-function annoncePrete(o){if(!me||me.role==='cuisine')return;if(me.role==='serveur'&&o.parId!==me.id)return;
+function annoncePrete(o){if(!me||me.role==='cuisine'||tab==='ecran')return;if(me.role==='serveur'&&o.parId!==me.id)return;
   if(o.preteLe&&Date.now()-new Date(o.preteLe).getTime()>10*60000)return;
   const ou=o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison'+(o.client&&o.client.quartier?' · '+o.client.quartier:''):'À emporter'+(o.client&&o.client.nom?' · '+o.client.nom:'');
   bandeau(`<div><div class="big">🔔 n°${o.n} ${t('Prête')} !</div><div class="sm">${esc(ou)} · ${o.items.map(i=>i.q+' × '+esc(i.nom)).join(', ')}</div></div>`,'#1E7FD8');
@@ -540,7 +574,7 @@ const has=f=>(FORMULES[S.set.formule]||FORMULES.essentiel).feat.includes(f);
 const roleOk=r=>r==='patron'||r!=='livreur'&&r!=='autre'&&(FORMULES[S.set.formule]||FORMULES.essentiel).roles.includes(r);
 const ME_KEY='terangaResto_me';
 let me=null;
-function tvStart(){if(tvOn&&me&&(me.role==='cuisine'||me.role==='caissier'||me.role==='patron'))tab='cuisine'}
+function tvStart(){if(tvOn&&me&&(me.role==='cuisine'||me.role==='caissier'||me.role==='patron'))tab='cuisine';try{if(localStorage.getItem('terangaResto_ecr')==='on'&&ecrOk())tab='ecran'}catch(e){}}
 function loadMe(){try{me=JSON.parse(localStorage.getItem(ME_KEY)||'null')}catch(e){me=null}
   if(me&&me.role!=='patron'){const s=S.staff.find(x=>x.id===me.id);if(!s||s.role!==me.role||!roleOk(s.role))me=null}tvStart()}
 function setMe(m){me=m;try{m?localStorage.setItem(ME_KEY,JSON.stringify(m)):localStorage.removeItem(ME_KEY)}catch(e){}}
@@ -633,15 +667,16 @@ function render(){
   document.body.classList.remove('tv');
   if(!me){nav.hidden=true;document.body.classList.add('nonav');document.getElementById('view').innerHTML=(DEMO?demoBar():'')+vLock();return}
   const T=tabsFor();
-  if(!T.some(([k])=>k===tab)&&!(tab==='cuisine'&&isP()&&has('cuisine')))tab=T[0][0];
+  if(!T.some(([k])=>k===tab)&&!(tab==='cuisine'&&isP()&&has('cuisine'))&&!(tab==='ecran'&&ecrOk()))tab=T[0][0];
   nav.hidden=T.length<2;
   nav.style.gridTemplateColumns=`repeat(${T.length},1fr)`;
   if(DEMO&&webSeen===null)fetchWeb();
   const enc=todayOrders().filter(o=>!o.annule&&o.statut==='cuisine').length;
   nav.innerHTML=T.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${IC[k]}${t(l)}${(k==='commandes'||k==='cuisine')&&enc?` (${enc})`:''}${k==='commandes'&&webVoit()&&WEB.length?` <span class="wbadge">🌐 ${WEB.length}</span>`:''}</button>`).join('');
-  const V={caisse:vCaisse,commandes:vCommandes,menu:vMenu,argent:vArgent,plus:vPlus,cuisine:vCuisine}[tab];
+  const V={caisse:vCaisse,commandes:vCommandes,menu:vMenu,argent:vArgent,plus:vPlus,cuisine:vCuisine,ecran:vEcran}[tab];
   document.body.classList.toggle('nonav',T.length<2);
   const tv=tvActif();document.body.classList.toggle('tv',tv);if(tv)tvWake();
+  if(tab==='ecran'){document.getElementById('view').innerHTML=vEcran();return}
   document.getElementById('view').innerHTML=(tv?'':(DEMO?demoBar():''))+abBanner()+(S.exemple&&isP()&&!tv?bannerEx():'')+V();
 }
 function demoBar(){return `<div class="banner" style="flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap"><span><b>Démo</b> · rien n'est envoyé en ligne</span><button class="btn sm" onclick="exitDemo()">Créer un compte / se connecter</button></div>`}
@@ -846,7 +881,7 @@ function vCuisine(){
 }
 /* ---------- Mode TV (la TV regarde, le tablette/téléphone appuie « Prête ») ---------- */
 let tvOn=(()=>{try{return localStorage.getItem('terangaResto_tv')==='on'}catch(e){return false}})(),wakeLk=null;
-function tvActif(){return tvOn&&!!me&&tab==='cuisine'}
+function tvActif(){return !!me&&(tvOn&&tab==='cuisine'||tab==='ecran')}
 function audioOk(){return !!(audioCtx&&audioCtx.state==='running')}
 async function tvWake(){try{if(tvActif()&&navigator.wakeLock&&!wakeLk&&document.visibilityState==='visible'){wakeLk=await navigator.wakeLock.request('screen');wakeLk.addEventListener('release',()=>{wakeLk=null})}}catch(e){}}
 function tvSet(on){tvOn=on;try{localStorage.setItem('terangaResto_tv',on?'on':'off')}catch(e){}
@@ -856,6 +891,37 @@ function tvSet(on){tvOn=on;try{localStorage.setItem('terangaResto_tv',on?'on':'o
 ['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{unlockAudio();if(tvActif())setTimeout(()=>{softRender();tvWake()},400)},{passive:true}));
 document.addEventListener('visibilitychange',tvWake);
 setInterval(()=>{if(tvActif())softRender()},30000);
+/* ---------- Écran clients (TV ou téléphone tourné vers les clients) ---------- */
+let ecrSeen=null,ecrNew={};
+const ecrOk=()=>!!me&&me.role!=='cuisine'&&me.role!=='serveur'&&has('cuisine');
+function ecrSet(on){try{localStorage.setItem('terangaResto_ecr',on?'on':'off')}catch(e){}ecrSeen=null;ecrNew={};
+  if(on){unlockAudio();try{const d=document.documentElement;(d.requestFullscreen||d.webkitRequestFullscreen||function(){}).call(d)}catch(e){}go('ecran');tvWake()}
+  else{try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}try{if(wakeLk)wakeLk.release()}catch(e){}wakeLk=null;go('commandes')}}
+function vEcran(){
+  const now=Date.now(),L=todayOrders().filter(o=>!o.annule&&o.type!=='livraison');
+  const prep=L.filter(o=>o.statut==='cuisine'&&kItems(o).length).sort((a,b)=>a.n-b.n);
+  const tp=o=>new Date(o.preteLe||o.date).getTime();
+  const rdy=L.filter(o=>o.statut==='prete'&&now-tp(o)<20*60000).sort((a,b)=>tp(b)-tp(a));
+  if(ecrSeen){const nw=rdy.filter(o=>!ecrSeen.has(o.id));nw.forEach(o=>ecrNew[o.id]=now);
+    if(nw.length&&voixOn){ding();const ns=nw.map(o=>o.n).reverse();setTimeout(()=>parler((ns.length>1?'Commandes numéro ':'Commande numéro ')+ns.join(', ')+(ns.length>1?', prêtes.':', prête.')),700)}}
+  ecrSeen=new Set(rdy.map(o=>o.id));
+  const isNew=o=>ecrNew[o.id]&&now-ecrNew[o.id]<90000;
+  const nm=o=>{const n=o.client&&o.client.nom?String(o.client.nom).trim().split(/\s+/)[0]:'';return o.type==='place'&&o.table?t('Table')+' '+o.table:n};
+  const chip=o=>`<div class="ecr-n${isNew(o)?' ecr-new':''}">${o.n}${nm(o)?`<small>${esc(nm(o))}</small>`:''}</div>`;
+  const h=rdy[0],d=new Date();
+  return `<div class="ecr" onclick="unlockAudio()">
+  <div class="ecr-h"><h1>${esc(S.set.nom||'Teranga Resto')}<small>${t('Vos commandes')}</small></h1>
+   ${voixOn&&!audioOk()?`<button class="ecr-snd" onclick="unlockAudio();softRender()">🔈 ${t('Touchez pour le son')}</button>`:''}
+   <span class="ecr-clk">${pad(d.getHours())}:${pad(d.getMinutes())}</span>
+   <button class="ecr-x" onclick="event.stopPropagation();ecrSet(false)" aria-label="Fermer l'écran clients">✕</button></div>
+  <div class="ecr-b">
+   <section class="ecr-p ecr-prep"><h2>🔥 ${t('En préparation')} <i>${prep.length||''}</i></h2>
+    <div class="ecr-g">${prep.slice(0,24).map(chip).join('')||`<div class="ecr-vide">${t('Aucune commande en préparation')}</div>`}</div></section>
+   <section class="ecr-p ecr-rdy"><h2>✅ ${t('Prête')} · ${t('venez récupérer')}</h2>
+    ${h?`<div class="ecr-hero${isNew(h)?' ecr-new':''}"><div class="ecr-n">${h.n}</div><div class="ecr-t">${t('Commande prête !')}${nm(h)?`<small>${esc(nm(h))}</small>`:''}</div></div>`:''}
+    <div class="ecr-g">${rdy.slice(1,13).map(chip).join('')}${h?'':`<div class="ecr-vide">${t('Les numéros prêts s\'affichent ici')}</div>`}</div></section>
+  </div>
+  <div class="ecr-f">🎫 ${t('Votre numéro est écrit sur votre ticket')} · <b>${t('Merci et bon appétit !')}</b></div></div>`}
 
 /* ---------- Paiement ---------- */
 let pay={};
@@ -942,7 +1008,7 @@ function vCommandes(){
   let L=(cmdF==='encours'?all.filter(o=>etat(o)!=='fini'):cmdF in EC?all.filter(o=>etat(o)===cmdF):all).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)||b.n-a.n);
   const TY={place:'Sur place',emporter:'À emporter',livraison:'Livraison'};
   const ST={cuisine:['t-cuisine','En cuisine'],prete:['t-prete','Prête'],servie:['t-servie','Servie']};
-  return `<div class="chips">${isP()&&has('cuisine')?`<button class="chip" onclick="go('cuisine')">${t('Écran cuisine')}</button>`:''}<button class="chip ${cmdF==='encours'?'on':''}" onclick="cmdF='encours';render()">${t('En cours')}</button><button class="chip ${cmdF==='tout'?'on':''}" onclick="cmdF='tout';render()">${t('Toutes aujourd\'hui')} (${all.length})</button></div>
+  return `<div class="chips">${isP()&&has('cuisine')?`<button class="chip" onclick="go('cuisine')">${t('Écran cuisine')}</button>`:''}${ecrOk()?`<button class="chip" onclick="ecrSet(true)">📺 ${t('Écran clients')}</button>`:''}<button class="chip ${cmdF==='encours'?'on':''}" onclick="cmdF='encours';render()">${t('En cours')}</button><button class="chip ${cmdF==='tout'?'on':''}" onclick="cmdF='tout';render()">${t('Toutes aujourd\'hui')} (${all.length})</button></div>
   <div class="oleg">${Object.entries(EC).map(([k,[c,l]])=>`<button style="--oc:${c}" class="${cmdF===k||cmdF==='tout'||(cmdF==='encours'&&k!=='fini')?'':'dim'}" onclick="cmdF=cmdF==='${k}'?'tout':'${k}';render()">${l} · ${nb[k]}</button>`).join('')}</div>
   ${vWeb()}
   <div class="olist">${L.map(o=>{const s=ST[o.statut];const e=etat(o);const isNew=Date.now()-new Date(o.date).getTime()<120000&&e==='cuisine';const nx=o.statut==='cuisine'?['prete','Prête']:o.statut==='prete'?['servie',o.type==='livraison'?'Livrée':'Servie']:null;
