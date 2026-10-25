@@ -790,9 +790,12 @@ function finishPay(o,mode,recu){
   toastAct(`n°${o.n} ${t('Payée')} · ${mName(mode)}`,t('Ticket'),()=>ticketOrder(o.id));
 }
 let cashId=null,cashRecu=0;
+/* Billets que le client peut donner : s'adaptent au total (ex. 18 500 → 19 000 · 20 000 · 30 000 · 50 000) */
+function billetsPour(T){const up=s=>Math.ceil(T/s)*s;
+  return [...new Set([up(500),up(1000),up(5000),up(10000),up(10000)+10000,1000,2000,5000,10000,20000,50000])].filter(v=>v>T).sort((a,b)=>a-b).slice(0,4)}
 function cashModal(id){cashId=id;cashRecu=0;drawCash()}
 function drawCash(){const o=S.orders.find(x=>x.id===cashId),T=tot(o);
-  const billets=[...new Set([T,500,1000,2000,5000,10000].filter(v=>v>=T))].sort((a,b)=>a-b).slice(0,5);
+  const billets=[T,...billetsPour(T)];
   modal(`<h2>${t('Espèces')} · n°${o.n}</h2>
    <div class="total"><span>${t('Total')}</span><span>${F(T)}</span></div>
    <div class="lbl">${t('Le client donne…')}</div>
@@ -868,7 +871,7 @@ function drawPay(){
    <div class="lbl">${t('Mode de paiement')}</div>
    <div class="modes">${Object.entries(MODES).map(([k,l])=>`<button class="mode ${pay.mode===k?'on':''}" onclick="pay.mode='${k}';drawPay()">${t(l)}</button>`).join('')}</div>
    ${pay.mode==='especes'?`<label class="f">${t('Reçu')} (F)<input id="p_recu" inputmode="numeric" value="${esc(pay.recu)}" oninput="pay.recu=this.value;document.getElementById('rendu').textContent=F(Math.max(0,(+this.value||0)-${T}))"></label>
-      <div class="row" style="flex-wrap:wrap">${[1000,2000,5000,10000].filter(v=>v>=T).slice(0,3).map(v=>`<button class="chip" onclick="pay.recu=${v};drawPay()">${F(v)}</button>`).join('')}</div>
+      <div class="row" style="flex-wrap:wrap">${billetsPour(T).map(v=>`<button class="chip" onclick="pay.recu=${v};drawPay()">${F(v)}</button>`).join('')}</div>
       <div class="total" style="font-size:20px"><span>${t('Monnaie à rendre')}</span><span id="rendu">${F(Math.max(0,rendu))}</span></div>`:''}
    ${pay.mode==='partage'?partageUI(o,T):''}
    ${pay.mode==='mixte'?`<div class="muted">${t('Écrivez combien le client paie avec chaque moyen.')}</div>
