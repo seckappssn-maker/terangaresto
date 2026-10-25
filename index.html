@@ -919,7 +919,7 @@ function vEcran(){
     <div class="ecr-g">${prep.slice(0,24).map(chip).join('')||`<div class="ecr-vide">${t('Aucune commande en préparation')}</div>`}</div></section>
    <section class="ecr-p ecr-rdy"><h2>✅ ${t('Prête')} · ${t('venez récupérer')}</h2>
     ${h?`<div class="ecr-hero${isNew(h)?' ecr-new':''}"><div class="ecr-n">${h.n}</div><div class="ecr-t">${t('Commande prête !')}${nm(h)?`<small>${esc(nm(h))}</small>`:''}</div></div>`:''}
-    <div class="ecr-g">${rdy.slice(1,13).map(chip).join('')}${h?'':`<div class="ecr-vide">${t('Les numéros prêts s\'affichent ici')}</div>`}</div></section>
+    <div class="ecr-g">${rdy.slice(1,13).sort((a,b)=>a.n-b.n).map(chip).join('')}${h?'':`<div class="ecr-vide">${t('Les numéros prêts s\'affichent ici')}</div>`}</div></section>
   </div>
   <div class="ecr-f">🎫 ${t('Votre numéro est écrit sur votre ticket')} · <b>${t('Merci et bon appétit !')}</b></div></div>`}
 
