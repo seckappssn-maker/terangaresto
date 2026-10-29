@@ -160,7 +160,7 @@ const WO={
  'Cette page n\'est pas disponible pour le moment.':'Xët wii jëfewul leegi.','Lien introuvable.':'Lien bi amul.','Pas de connexion internet.':'Amul internet.','Réessayer':'Jéemaatal',
  'Commande envoyée ? Le restaurant va vous confirmer sur WhatsApp.':'Yónne nga komand bi ? Restoraan bi dina la dëggal ci WhatsApp.','Nouvelle commande':'Komand bu bees',
  'Texte plus grand':'Bind bu gën a mag','Texte normal':'Bind bu yem','Écrivez votre téléphone.':'Bindal sa telefon.','Envoyée au restaurant':'Yónne nañu ko restoraan bi',
- 'Commande confirmée !':'Komand bi dëggal nañu ko !','Le restaurant prépare votre commande.':'Restoraan bi mungiy togg sa komand.','En attente de confirmation… Cette page se met à jour toute seule.':'Ñungiy xaar ñu dëggal… Xët wii dina soppiku boppam.'
+ 'Commande confirmée !':'Komand bi dëggal nañu ko !','Le restaurant prépare votre commande.':'Restoraan bi mungiy togg sa komand.','En attente de confirmation… Cette page se met à jour toute seule.':'Ñungiy xaar ñu dëggal… Xët wii dina soppiku boppam.'
 };
 let LANG=store('trm.lang')||'fr';
 const t=s=>LANG==='wo'&&WO[s]?WO[s]:s;
@@ -381,10 +381,10 @@ function statutBox(){const st=LAST&&LAST.st;
   if(st==='demo')return `<div class="stbox" style="--sc:#7B3FA0"><b>🌐 ${t('Envoyée au restaurant')}</b><div>${t('Exemple : sur une vraie page, la commande arrive directement dans la caisse du restaurant.')}</div></div>`;
   if(st==='accepte'){const n=LAST.n?' n°'+LAST.n:'',liv=LAST.type==='livraison',et=LAST.etat,u=lienSuivi();
     const lien=u&&!['servie','annule'].includes(et)?`<a class="stlink" href="${esc(u)}" target="_blank" rel="noopener">📱 ${t('Suivre ma commande')}</a>`:'';
-    if(et==='prete')return `<div class="stbox" style="--sc:#1F9D5B"><b>✅ ${t('Votre commande')}${n} ${t('est prête !')}</b><div>${liv?t('Le livreur part bientôt avec votre commande.'):LAST.type==='emporter'?t('Venez la récupérer au restaurant.'):t('Elle arrive.')}</div>${lien}</div>`;
-    if(et==='servie')return `<div class="stbox" style="--sc:#2E7D4F"><b>${liv?'🛵 '+t('Commande livrée.'):'😋 '+t('Commande servie.')}</b><div>${t('Bon appétit et merci !')}</div></div>`;
+    if(et==='prete')return `<div class="stbox" style="--sc:#1F9D5B"><b>✅ ${t('Votre commande')}${n} ${t('est prête !')}</b><div>${liv?t('Le livreur part bientôt avec votre commande.'):LAST.type==='emporter'?t('Venez la récupérer au restaurant.'):t('Elle arrive.')}</div>${lien}</div>`;
+    if(et==='servie')return `<div class="stbox" style="--sc:#2E7D4F"><b>${liv?'🛵 '+t('Commande livrée.'):'😋 '+t('Commande servie.')}</b><div>${t('Bon appétit et merci !')}</div></div>`;
     if(et==='annule')return `<div class="stbox" style="--sc:#C62828"><b>❌ ${t('Commande annulée.')}</b><div>${t('Écrivez au restaurant sur WhatsApp pour en savoir plus.')}</div></div>`;
-    return `<div class="stbox" style="--sc:#E07B0E"><b>✅ ${t('Commande confirmée !')}${n}</b><div>🔥 ${et==='cuisine'?t('En préparation… Cette page vous prévient quand c\'est prêt.'):t('Le restaurant prépare votre commande.')}</div>${lien}</div>`}
+    return `<div class="stbox" style="--sc:#E07B0E"><b>✅ ${t('Commande confirmée !')}${n}</b><div>🔥 ${et==='cuisine'?t('En préparation… Cette page vous prévient quand c\'est prêt.'):t('Le restaurant prépare votre commande.')}</div>${lien}</div>`}
   if(st==='refuse')return `<div class="stbox" style="--sc:#C62828"><b>❌ ${t('Le restaurant ne peut pas prendre la commande pour le moment.')}</b><div>${t('Écrivez-lui sur WhatsApp pour en savoir plus.')}</div></div>`;
   if(st==='nouveau'||st==='envoi')return `<div class="stbox" style="--sc:#E07B0E"><b>⏳ ${t('Envoyée au restaurant')}</b><div>${t('En attente de confirmation… Cette page se met à jour toute seule.')}</div></div>`;
   return `<b>${t('Commande envoyée ? Le restaurant va vous confirmer sur WhatsApp.')}</b>`}
