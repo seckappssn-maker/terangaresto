@@ -1070,7 +1070,10 @@ let confirmCancel=null;
 function cancelOrder(id){if(confirmCancel!==id){confirmCancel=id;toast('Touchez encore pour confirmer l\'annulation');return}const o=S.orders.find(x=>x.id===id);o.annule=true;confirmCancel=null;save();closeM();render();toast('Commande annulée')}
 
 /* ---------- Tickets ---------- */
-function printHTML(h){document.getElementById('print').innerHTML=h;setTimeout(()=>{try{window.print()}catch(e){}},50)}
+function printHTML(h){document.getElementById('print').innerHTML=h;try{window.print()}catch(e){toast(t('Impression impossible sur cet appareil'))}}
+/* Sur iPhone, ouvert depuis l'icône de l'écran d'accueil, l'impression ne marche pas : on le dit */
+const iosApp=()=>{try{return navigator.standalone===true}catch(e){return false}};
+function printNote(){return iosApp()?`<div class="muted" style="font-size:13px;text-align:center;margin-top:-4px">${t('Sur iPhone, l\'impression marche seulement dans Safari, pas depuis l\'icône de l\'écran d\'accueil. Sinon : WhatsApp ou Copier.')}</div>`:''}
 function ticketBody(o){
   const T=tot(o);
   return `<div class="c xl">${esc(S.set.nom)}</div><div class="c">${esc(S.set.adresse)}<br>Tél ${esc(S.set.tel)}</div><hr>
@@ -1087,7 +1090,7 @@ function ticketBody(o){
 }
 function ticketOrder(id,after){const o=S.orders.find(x=>x.id===id);
   modal(`<h2>${t('Ticket')} n°${o.n}</h2><div class="card" style="font-family:'Courier New',monospace;font-size:13px">${ticketBody(o).replace(/class="r"/g,'class="row between"').replace(/<hr>/g,'<hr style="border:0;border-top:1px dashed var(--line);width:100%">')}</div>
-   <button class="btn full" onclick="printHTML(ticketBody(S.orders.find(x=>x.id==='${id}')))">Imprimer (58 mm)</button>
+   <button class="btn full" onclick="printHTML(ticketBody(S.orders.find(x=>x.id==='${id}')))">Imprimer (58 mm)</button>${printNote()}
    ${o.client&&o.client.tel?`<button class="btn alt full" onclick="waOrder('${id}')">Envoyer sur WhatsApp</button>`:''}
    <button class="btn alt full" onclick="copyTxt(ticketTxt(S.orders.find(x=>x.id==='${id}')))">Copier le ticket</button>
    <button class="btn ghost full" onclick="closeM();render()">${t('Fermer')}</button>`)}
@@ -1221,13 +1224,25 @@ function depModal(){modal(`<h2>Nouvelle dépense</h2>
   <button class="btn full" onclick="saveDep()">${t('Enregistrer')}</button><button class="btn ghost full" onclick="closeM()">${t('Annuler')}</button>`)}
 function saveDep(){const m=+val('d_m');if(!m){toast('Écrivez le montant');return}S.depenses.push({id:uid(),date:new Date().toISOString(),cat:val('d_cat'),desc:val('d_desc'),montant:m});save();closeM();render();toast('Dépense notée')}
 function delDep(id){if(delConf!==id){delConf=id;toast('Touchez encore pour supprimer');return}S.depenses=S.depenses.filter(x=>x.id!==id);delConf=null;save();render()}
-function zCaisse(){const from=range('jour'),E=entrees(from),D=S.depenses.filter(d=>inR(d.date,from)),ord=S.orders.filter(o=>!o.annule&&inR(o.date,from));
-  printHTML(`<div class="c xl">${esc(S.set.nom)}</div><div class="c">Fin de journée ${new Date().toLocaleDateString('fr-FR')}</div><hr>
+/* Fin de journée : on l'affiche d'abord à l'écran (toujours visible), puis Imprimer, WhatsApp ou Copier */
+function zData(){const from=range('jour'),E=entrees(from),D=S.depenses.filter(d=>inR(d.date,from)),ord=S.orders.filter(o=>!o.annule&&inR(o.date,from));return{E,D,ord}}
+function zBody(){const{E,D,ord}=zData();
+  return `<div class="c xl">${esc(S.set.nom)}</div><div class="c">Fin de journée ${new Date().toLocaleDateString('fr-FR')}</div><hr>
   <div class="r"><span>Commandes</span><span>${ord.length}</span></div><div class="r"><span>Ventes</span><span>${F(sum(ord,tot))}</span></div><hr>
   ${['especes','wave','om'].map(m=>`<div class="r"><span>${MODES[m]}</span><span>${F(sum(E.filter(e=>e.mode===m)))}</span></div>`).join('')}
   <div class="r xl"><span>ENTRÉES</span><span>${F(sum(E))}</span></div><hr>
   ${D.map(d=>`<div class="r"><span>${esc(d.desc||d.cat)}</span><span>${F(d.montant)}</span></div>`).join('')}
-  <div class="r xl"><span>DÉPENSES</span><span>${F(sum(D))}</span></div><hr><div class="r xl"><span>BÉNÉFICE</span><span>${F(sum(E)-sum(D))}</span></div>`)}
+  <div class="r xl"><span>DÉPENSES</span><span>${F(sum(D))}</span></div><hr><div class="r xl"><span>BÉNÉFICE</span><span>${F(sum(E)-sum(D))}</span></div>`}
+function zTxt(){const{E,D,ord}=zData();
+  return [`*${S.set.nom}*`,`Fin de journée ${new Date().toLocaleDateString('fr-FR')}`,'',`Commandes : ${ord.length}`,`Ventes : ${F(sum(ord,tot))}`,'',
+    ...['especes','wave','om'].map(m=>`${MODES[m]} : ${F(sum(E.filter(e=>e.mode===m)))}`),`*ENTRÉES : ${F(sum(E))}*`,'',
+    ...D.map(d=>`${d.desc||d.cat} : ${F(d.montant)}`),`*DÉPENSES : ${F(sum(D))}*`,'',`*BÉNÉFICE : ${F(sum(E)-sum(D))}*`].join('\n')}
+function zCaisse(){
+  modal(`<h2>${t('Fin de journée')}</h2><div class="card" style="font-family:'Courier New',monospace;font-size:13px">${zBody().replace(/class="r"/g,'class="row between"').replace(/class="r xl"/g,'class="row between" style="font-weight:800;font-size:15px"').replace(/<hr>/g,'<hr style="border:0;border-top:1px dashed var(--line);width:100%">')}</div>
+   <button class="btn full" onclick="printHTML(zBody())">🖨 ${t('Imprimer')} (58 mm)</button>${printNote()}
+   <button class="btn alt full" onclick="openWA('',zTxt())">${t('Envoyer sur WhatsApp')}</button>
+   <button class="btn alt full" onclick="copyTxt(zTxt())">${t('Copier')}</button>
+   <button class="btn ghost full" onclick="closeM()">${t('Fermer')}</button>`)}
 
 /* ---------- Plus ---------- */
 function vPlus(){
