@@ -113,6 +113,9 @@ main{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:8px 24px}
 label.f{display:flex;flex-direction:column;gap:5px;font-weight:700;font-size:calc(var(--fs)*.9)}
 input,select,textarea{border:1.5px solid var(--line);border-radius:12px;padding:12px;background:var(--surface);width:100%;font-size:max(16px,var(--fs))}
 .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+/* iPhone : les champs heure / date débordaient à droite */
+label.f{min-width:0}input,select,textarea{box-sizing:border-box;max-width:100%}
+input[type=time],input[type=date]{-webkit-appearance:none;appearance:none;min-width:0;display:block;min-height:50px;text-align:left}
 .tot{display:flex;justify-content:space-between;font-family:var(--f-d);font-weight:800;font-size:calc(var(--fs)*1.45)}
 .sub{display:flex;justify-content:space-between;color:var(--muted);font-weight:700}
 .send{display:flex;align-items:center;justify-content:center;gap:12px;text-decoration:none;background:var(--wa);color:#fff;border-radius:16px;min-height:64px;padding:14px;font-weight:800;font-size:calc(var(--fs)*1.15)}
