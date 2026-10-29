@@ -548,7 +548,7 @@ async function webConfirmer(id){const w=WEB.find(x=>x.id===id);if(!w)return;cons
       return{pid:i.pid,nom:p?(i.t?p.nom+' ('+i.t+')':p.nom):i.nom,prix:tl?+tl.p||0:+i.prix||0,q:+i.q||1,...(i.t?{t:i.t}:{})}});
     const notes=[d.heure?'Heure : '+d.heure:'',d.note||''].filter(Boolean).join(' · ');
     const typ=d.mode==='livraison'?'livraison':d.mode==='emporter'?'emporter':'place';
-    const o={id:uid(),n,date:new Date().toISOString(),type:typ,table:'',client:{nom:d.nom||'',tel:d.tel||'',quartier:[d.zone,d.adr].filter(Boolean).join(' · ')},frais:typ==='livraison'?+d.frais||0:0,items,note:notes,statut:items.some(enCuis)?'cuisine':'prete',paye:false,par:'En ligne',parId:'web',web:true};
+    const o={id:uid(),n,date:new Date().toISOString(),type:typ,table:'',client:{nom:d.nom||'',tel:d.tel||'',quartier:[d.zone,d.adr].filter(Boolean).join(' · ')},frais:typ==='livraison'?+d.frais||0:0,items,note:notes,statut:items.some(enCuis)?'cuisine':'prete',paye:false,par:'En ligne',parId:'web',web:true,webId:id,tk:tkGen()};
     if(!await webMaj(id,'accepte',n))return;
     S.orders.push(o);save()}
   else if(!await webMaj(id,'accepte'))return;

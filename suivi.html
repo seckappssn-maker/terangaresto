@@ -106,8 +106,8 @@ function draw(){const A=$('app');if(!C){return}
   if(C.resto){$('resto').textContent=C.resto;document.title='Ma commande – '+C.resto}
   const e=etat(C),table=C.type==='place'&&C.table;
   const msg={cuisine:`<div class="etat prep">🔥 En préparation<small>Restez ici : la page vous prévient quand c'est prêt.</small></div>`,
-    prete:`<div class="etat ok">✅ Votre commande est prête !<small>${table?'Le serveur vous l\'apporte à la table '+esc(C.table)+'.':'Venez la récupérer au comptoir.'}</small></div>`,
-    servie:`<div class="etat fini">Bon appétit ! 😋<small>Merci et à bientôt.</small></div>`,
+    prete:`<div class="etat ok">✅ Votre commande est prête !<small>${C.type==='livraison'?'Le livreur part bientôt avec votre commande.':table?'Le serveur vous l\'apporte à la table '+esc(C.table)+'.':'Venez la récupérer au comptoir.'}</small></div>`,
+    servie:`<div class="etat fini">${C.type==='livraison'?'🛵 Commande livrée.':'Bon appétit ! 😋'}<small>${C.type==='livraison'?'Bon appétit et merci !':'Merci et à bientôt.'}</small></div>`,
     annule:`<div class="etat bad">Commande annulée<small>Demandez à la caisse.</small></div>`}[e];
   const st=(k,l,ic)=>{const ord=['recue','cuisine','prete'],ix=ord.indexOf(k),cur=e==='servie'||e==='prete'?3:ord.indexOf(e==='annule'?'recue':e);return`<div class="step ${ix<cur?'done':ix===cur?'on':''}"><i>${ix<cur?'✓':ic}</i>${l}</div>`};
   A.innerHTML=`${son}<div class="card ${e==='prete'?'pret':''}${e==='prete'&&prev!=='prete'&&prev?' flash':''}">

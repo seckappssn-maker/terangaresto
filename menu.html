@@ -99,6 +99,7 @@ main{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:8px 24px}
 .x{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;min-height:44px;padding:8px 14px;font-weight:800;cursor:pointer}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .line{display:flex;align-items:center;gap:10px}
+.stlink{display:inline-block;margin-top:4px;font-weight:700;color:var(--sc);text-decoration:underline}
 .stbox{border-left:6px solid var(--sc);background:color-mix(in srgb,var(--sc) 12%,var(--surface));border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;text-align:left}
 .stbox b{color:var(--sc)}
 .stmain{max-width:860px;margin:12px auto 0;padding:0 16px}
@@ -364,17 +365,32 @@ function envoyerCaisse(){const L=lines(),z=zones().find(z=>z.nom===o.zone);
     .then(r=>{LAST.st=r.ok?'nouveau':'whatsapp';store('trm.last.'+CODE,LAST);if(sent)drawOrder();if(r.ok)suivre()}).catch(()=>{})}catch(e){}}
 async function suivre(){clearTimeout(stT);if(!LAST||IS_DEMO||!LAST.id)return;if(Date.now()-LAST.at>6*3600000)return;
   try{const r=await fetch(SUPA_URL+'/rest/v1/rpc/resto_web_order_statut',{method:'POST',headers:{'Content-Type':'application/json',apikey:SUPA_KEY},body:JSON.stringify({p_id:LAST.id})});
-    if(r.ok){const j=await r.json();if(j&&j.statut){const ch=j.statut!==LAST.st;LAST.st=j.statut;LAST.n=j.commande||null;store('trm.last.'+CODE,LAST);if(ch){if(sent)drawOrder();else if(STATE==='ok'&&!$('sheet'))render()}}}}catch(e){}
-  if(LAST.st==='nouveau'||LAST.st==='envoi')stT=setTimeout(suivre,8000)}
+    if(r.ok){const j=await r.json();if(j&&j.statut){const et=j.etat||null,ch=j.statut!==LAST.st||et!==(LAST.etat||null);
+      if(et==='prete'&&LAST.etat!=='prete')sonPrete();
+      LAST.st=j.statut;LAST.n=j.commande||null;LAST.etat=et;if(j.type)LAST.type=j.type;if(j.i&&j.k){LAST.i=j.i;LAST.k=j.k}store('trm.last.'+CODE,LAST);
+      if(ch){if(sent)drawOrder();else if(STATE==='ok'&&!$('sheet'))keepScroll(render)}}}}catch(e){}
+  if(enCours())stT=setTimeout(suivre,8000)}
+/* La commande est encore à suivre : pas encore confirmée, ou confirmée mais pas encore servie / livrée */
+function enCours(){return !!LAST&&(LAST.st==='nouveau'||LAST.st==='envoi'||(LAST.st==='accepte'&&!['servie','annule'].includes(LAST.etat)))}
+/* Petit son quand la commande est prête (le son est autorisé au premier toucher sur la page) */
+let AC=null;document.addEventListener('pointerdown',()=>{try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state!=='running')AC.resume()}catch(e){}},{passive:true});
+function sonPrete(){try{navigator.vibrate&&navigator.vibrate([300,150,300,150,600])}catch(e){}
+  try{if(!AC)return;[0,.35].forEach((d,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=i?1318:988;g.gain.setValueAtTime(.0001,AC.currentTime+d);g.gain.exponentialRampToValueAtTime(.5,AC.currentTime+d+.02);g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d+.9);o.connect(g);g.connect(AC.destination);o.start(AC.currentTime+d);o.stop(AC.currentTime+d+1)})}catch(e){}}
+function lienSuivi(){if(!LAST||!LAST.i||!LAST.k)return'';try{return new URL('suivi.html?i='+encodeURIComponent(LAST.i)+'&k='+encodeURIComponent(LAST.k),location.href).href}catch(e){return''}}
 function statutBox(){const st=LAST&&LAST.st;
   if(st==='demo')return `<div class="stbox" style="--sc:#7B3FA0"><b>🌐 ${t('Envoyée au restaurant')}</b><div>${t('Exemple : sur une vraie page, la commande arrive directement dans la caisse du restaurant.')}</div></div>`;
-  if(st==='accepte')return `<div class="stbox" style="--sc:#2E7D4F"><b>✅ ${t('Commande confirmée !')}${LAST.n?' n°'+LAST.n:''}</b><div>${t('Le restaurant prépare votre commande.')}</div></div>`;
+  if(st==='accepte'){const n=LAST.n?' n°'+LAST.n:'',liv=LAST.type==='livraison',et=LAST.etat,u=lienSuivi();
+    const lien=u&&!['servie','annule'].includes(et)?`<a class="stlink" href="${esc(u)}" target="_blank" rel="noopener">📱 ${t('Suivre ma commande')}</a>`:'';
+    if(et==='prete')return `<div class="stbox" style="--sc:#1F9D5B"><b>✅ ${t('Votre commande')}${n} ${t('est prête !')}</b><div>${liv?t('Le livreur part bientôt avec votre commande.'):LAST.type==='emporter'?t('Venez la récupérer au restaurant.'):t('Elle arrive.')}</div>${lien}</div>`;
+    if(et==='servie')return `<div class="stbox" style="--sc:#2E7D4F"><b>${liv?'🛵 '+t('Commande livrée.'):'😋 '+t('Commande servie.')}</b><div>${t('Bon appétit et merci !')}</div></div>`;
+    if(et==='annule')return `<div class="stbox" style="--sc:#C62828"><b>❌ ${t('Commande annulée.')}</b><div>${t('Écrivez au restaurant sur WhatsApp pour en savoir plus.')}</div></div>`;
+    return `<div class="stbox" style="--sc:#E07B0E"><b>✅ ${t('Commande confirmée !')}${n}</b><div>🔥 ${et==='cuisine'?t('En préparation… Cette page vous prévient quand c\'est prêt.'):t('Le restaurant prépare votre commande.')}</div>${lien}</div>`}
   if(st==='refuse')return `<div class="stbox" style="--sc:#C62828"><b>❌ ${t('Le restaurant ne peut pas prendre la commande pour le moment.')}</b><div>${t('Écrivez-lui sur WhatsApp pour en savoir plus.')}</div></div>`;
   if(st==='nouveau'||st==='envoi')return `<div class="stbox" style="--sc:#E07B0E"><b>⏳ ${t('Envoyée au restaurant')}</b><div>${t('En attente de confirmation… Cette page se met à jour toute seule.')}</div></div>`;
   return `<b>${t('Commande envoyée ? Le restaurant va vous confirmer sur WhatsApp.')}</b>`}
 
 boot();
-if(LAST&&LAST.id&&(LAST.st==='nouveau'||LAST.st==='envoi'))suivre();
+if(LAST&&LAST.id&&enCours())suivre();
 </script>
 
 </body>
