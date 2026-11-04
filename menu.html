@@ -120,6 +120,9 @@ input[type=time],input[type=date]{-webkit-appearance:none;appearance:none;min-wi
 .sub{display:flex;justify-content:space-between;color:var(--muted);font-weight:700}
 .send{display:flex;align-items:center;justify-content:center;gap:12px;text-decoration:none;background:var(--wa);color:#fff;border-radius:16px;min-height:64px;padding:14px;font-weight:800;font-size:calc(var(--fs)*1.15)}
 .err{color:var(--bad);font-weight:700}
+.geobtn{width:100%;font-size:calc(var(--fs)*1.02)}.geobtn:disabled{opacity:.6}
+.geook{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--ok-soft);color:var(--ok);border-radius:12px;padding:10px 12px}.geook small{color:var(--ink);font-weight:500}
+.geomsg{font-size:.88em;color:var(--ink)}.geomsg:empty{display:none}
 .muted{color:var(--muted)}
 .state{max-width:520px;margin:60px auto;padding-inline:16px;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center}
 .state h1{font-size:calc(var(--fs)*1.7)}
@@ -314,6 +317,9 @@ function drawOrder(){const L=lines(),sv=services(),Z=zones(),sh=$('sheet');if(!s
    <div class="modes">${sv.map(([k,l])=>`<button class="mode ${mode===k?'on':''}" onclick="rd();mode='${k}';saveCart();drawOrder()" aria-pressed="${mode===k}">${t(l)}</button>`).join('')}</div>
    ${mode==='livraison'?`${Z.length?`<label class="f">${t('Zone de livraison')}<select id="o_zone" onchange="rd();drawOrder()"><option value="">—</option>${Z.map(z=>`<option value="${esc(z.nom)}" ${o.zone===z.nom?'selected':''}>${esc(z.nom)} · ${F(z.prix)}</option>`).join('')}</select></label>`:''}
      <label class="f">${t('Adresse ou repère')}<input id="o_adr" value="${esc(o.adr)}" placeholder="Ex : Parcelles U17, près de la pharmacie" oninput="rd();upd()"></label>
+     ${geoOk()?`<div class="geook"><span>📍 <b>${t('Ma position sera envoyée')}</b><br><small>${t('Le livreur vous trouve sur la carte')}${o.geo.acc?' (± '+Math.round(o.geo.acc)+' m)':''}</small></span><button class="x" onclick="geoClear()">${t('Retirer')}</button></div>`
+       :`<button class="x geobtn" id="geoB" onclick="geoAsk()">📍 ${t('Envoyer ma position')}</button><div class="muted" style="font-size:.85em">${t('Facultatif : le livreur vous trouve plus vite.')}</div>`}
+     <div id="geoMsg" class="geomsg" role="status"></div>
      <label class="f">${t('Heure souhaitée')}<input id="o_heure" type="time" value="${esc(o.heure)}" oninput="rd();upd()"></label><div class="muted" style="font-size:.85em">${t('Dès que possible')} : laissez vide.</div>`:''}
    ${mode==='emporter'?`<label class="f">${t('Heure souhaitée')}<input id="o_heure" type="time" value="${esc(o.heure)}" oninput="rd();upd()"></label>`:''}
    ${mode==='place'?`<div class="row2"><label class="f">${t('Date')}<input id="o_date" type="date" min="${today}" value="${esc(o.date||today)}" oninput="rd();upd()"></label><label class="f">${t('Heure')}<input id="o_heure" type="time" value="${esc(o.heure)}" oninput="rd();upd()"></label></div>
@@ -331,6 +337,19 @@ function drawOrder(){const L=lines(),sv=services(),Z=zones(),sh=$('sheet');if(!s
   ${sent?`<div class="box" style="text-align:center">${statutBox()}<button class="add" onclick="cart={};sent=false;saveCart();closeOrder()">${t('Nouvelle commande')}</button></div>`:''}
   ${waOk()?`<a id="sendA" class="send alt" href="#" target="_blank" rel="noopener" onclick="return trySend(event)"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.6-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg><span id="sendT"></span></a>`:''}`;
   upd()}
+/* ---------- Position du client (GPS du téléphone) ---------- */
+const geoOk=()=>!!(o.geo&&isFinite(o.geo.lat)&&isFinite(o.geo.lng)&&Date.now()-(+o.geo.t||0)<3*3600000);
+function geoClear(){rd();delete o.geo;saveCart();drawOrder()}
+function geoHelp(code){const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),crios=/CriOS/.test(navigator.userAgent);
+  if(code===1)return ios?'Position bloquée. Sur iPhone : Réglages → Confidentialité et sécurité → Service de localisation → '+(crios?'Chrome':'Sites web Safari')+' → « Lorsque l\'app est active ». Puis revenez et touchez encore le bouton.'
+    :'Position bloquée. Touchez le cadenas à gauche de l\'adresse de la page → Autorisations → Position → Autoriser. Vérifiez aussi que la localisation du téléphone est activée.';
+  return 'Position introuvable pour le moment. Activez la localisation du téléphone, allez près d\'une fenêtre et réessayez. Sinon, écrivez bien votre adresse.'}
+function geoAsk(){rd();const m=$('geoMsg'),b=$('geoB');
+  if(!navigator.geolocation||!window.isSecureContext){if(m)m.textContent='Ce navigateur ne donne pas la position. Écrivez bien votre adresse.';return}
+  if(b){b.disabled=true;b.textContent='📍 …'}if(m)m.textContent='Recherche de votre position… Si le téléphone demande, touchez « Autoriser ».';
+  navigator.geolocation.getCurrentPosition(p=>{o.geo={lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy||0),t:Date.now()};saveCart();drawOrder()},
+    e=>{if(b){b.disabled=false;b.textContent='📍 '+t('Envoyer ma position')}const x=$('geoMsg');if(x)x.textContent=geoHelp(e&&e.code)},
+    {enableHighAccuracy:true,timeout:20000,maximumAge:60000})}
 function problem(){const L=lines();
   if(!mode)return t('Comment voulez-vous votre repas ?');
   if(!L.length&&mode!=='place')return t('Choisissez au moins un plat.');
@@ -348,7 +367,7 @@ function message(){const L=lines(),M={livraison:'Livraison',emporter:'À emporte
   if(mode==='livraison')out.push(`Livraison : ${z?F(z.prix):'à confirmer'}`);
   if(L.length)out.push(`*TOTAL : ${F(subTot()+frais())}*${mode==='livraison'&&!z?' + livraison':''}`);
   out.push('');out.push(`Nom : ${o.nom.trim()}`);if(o.tel.trim())out.push(`Tél : ${o.tel.trim()}`);
-  if(mode==='livraison'){out.push(`Adresse : ${o.adr.trim()}`);out.push(`Heure : ${o.heure||'dès que possible'}`)}
+  if(mode==='livraison'){out.push(`Adresse : ${o.adr.trim()}`);if(geoOk())out.push(`📍 Ma position : https://maps.google.com/?q=${o.geo.lat},${o.geo.lng}`);out.push(`Heure : ${o.heure||'dès que possible'}`)}
   if(mode==='emporter')out.push(`Heure de retrait : ${o.heure||'dès que possible'}`);
   if(mode==='place'){out.push(`Table pour ${Math.max(1,+o.pers||1)} personne(s)`);out.push(`Le ${fd(o.date)} à ${o.heure}`)}
   if(o.note.trim())out.push(`Note : ${o.note.trim()}`);
@@ -372,7 +391,7 @@ let LAST=store('trm.last.'+(CODE||'DEMO')),stT=null;
 function newId(){try{return crypto.randomUUID()}catch(e){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})}}
 function envoyerCaisse(){const L=lines(),z=zones().find(z=>z.nom===o.zone);
   const d={mode,nom:o.nom.trim(),tel:o.tel.trim(),zone:mode==='livraison'&&z?z.nom:'',adr:mode==='livraison'?o.adr.trim():'',heure:o.heure||'',date:mode==='place'?o.date:'',pers:mode==='place'?Math.max(1,+o.pers||1):0,
-    frais:mode==='livraison'?frais():0,note:o.note.trim(),items:L.map(l=>({pid:l.p.id,nom:l.nom,prix:l.prix,q:l.q,...(l.tl?{t:l.tl}:{})}))};
+    frais:mode==='livraison'?frais():0,note:o.note.trim(),...(mode==='livraison'&&geoOk()?{geo:{lat:o.geo.lat,lng:o.geo.lng,acc:o.geo.acc||0}}:{}),items:L.map(l=>({pid:l.p.id,nom:l.nom,prix:l.prix,q:l.q,...(l.tl?{t:l.tl}:{})}))};
   const id=newId();LAST={id,at:Date.now(),st:IS_DEMO?'demo':'envoi',n:null};store('trm.last.'+(CODE||'DEMO'),LAST);
   if(IS_DEMO)return;
   try{fetch(SUPA_URL+'/rest/v1/rpc/resto_web_order',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',apikey:SUPA_KEY},body:JSON.stringify({p_code:CODE,p_id:id,p_data:d})})
@@ -381,8 +400,8 @@ function envoyerCaisse(){const L=lines(),z=zones().find(z=>z.nom===o.zone);
 async function suivre(){clearTimeout(stT);if(!LAST||IS_DEMO||!LAST.id)return;if(Date.now()-LAST.at>6*3600000)return;
   try{const r=await fetch(SUPA_URL+'/rest/v1/rpc/resto_web_order_statut',{method:'POST',headers:{'Content-Type':'application/json',apikey:SUPA_KEY},body:JSON.stringify({p_id:LAST.id})});
     if(r.ok){const j=await r.json();if(j&&j.statut){const et=j.etat||null,ch=j.statut!==LAST.st||et!==(LAST.etat||null);
-      if(et==='prete'&&LAST.etat!=='prete')sonPrete();
-      LAST.st=j.statut;LAST.n=j.commande||null;LAST.etat=et;if(j.type)LAST.type=j.type;if(j.i&&j.k){LAST.i=j.i;LAST.k=j.k}store('trm.last.'+CODE,LAST);
+      if((et==='prete'||et==='route')&&LAST.etat!==et)sonPrete();
+      LAST.st=j.statut;LAST.livreur=j.livreur||null;LAST.n=j.commande||null;LAST.etat=et;if(j.type)LAST.type=j.type;if(j.i&&j.k){LAST.i=j.i;LAST.k=j.k}store('trm.last.'+CODE,LAST);
       if(ch){if(sent)drawOrder();else if(STATE==='ok'&&!$('sheet'))keepScroll(render)}}}}catch(e){}
   if(enCours())stT=setTimeout(suivre,8000)}
 /* La commande est encore à suivre : pas encore confirmée, ou confirmée mais pas encore servie / livrée */
@@ -397,6 +416,7 @@ function statutBox(){const st=LAST&&LAST.st;
   if(st==='accepte'){const n=LAST.n?' n°'+LAST.n:'',liv=LAST.type==='livraison',et=LAST.etat,u=lienSuivi();
     const lien=u&&!['servie','annule'].includes(et)?`<a class="stlink" href="${esc(u)}" target="_blank" rel="noopener">📱 ${t('Suivre ma commande')}</a>`:'';
     if(et==='prete')return `<div class="stbox" style="--sc:#1F9D5B"><b>✅ ${t('Votre commande')}${n} ${t('est prête !')}</b><div>${liv?t('Le livreur part bientôt avec votre commande.'):LAST.type==='emporter'?t('Venez la récupérer au restaurant.'):t('Elle arrive.')}</div>${lien}</div>`;
+    if(et==='route')return `<div class="stbox" style="--sc:#155E83"><b>🛵 ${t('Votre commande')}${n} ${t('est en route !')}</b><div>${LAST.livreur?esc(LAST.livreur)+' '+t('vous l\'apporte.'):t('Le livreur vous l\'apporte.')} ${t('Gardez votre téléphone près de vous.')}</div>${lien}</div>`;
     if(et==='servie')return `<div class="stbox" style="--sc:#2E7D4F"><b>${liv?'🛵 '+t('Commande livrée.'):'😋 '+t('Commande servie.')}</b><div>${t('Bon appétit et merci !')}</div></div>`;
     if(et==='annule')return `<div class="stbox" style="--sc:#C62828"><b>❌ ${t('Commande annulée.')}</b><div>${t('Écrivez au restaurant sur WhatsApp pour en savoir plus.')}</div></div>`;
     return `<div class="stbox" style="--sc:#E07B0E"><b>✅ ${t('Commande confirmée !')}${n}</b><div>🔥 ${et==='cuisine'?t('En préparation… Cette page vous prévient quand c\'est prêt.'):t('Le restaurant prépare votre commande.')}</div>${lien}</div>`}

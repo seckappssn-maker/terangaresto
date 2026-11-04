@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Espace livreur : vos livraisons, l'adresse du client, le montant à encaisser.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Espace livreur – Teranga Resto">
+<meta property="og:description" content="Vos livraisons du restaurant : adresse, position du client, montant à encaisser.">
+<meta property="og:image" content="https://seckappssn-maker.github.io/terangaresto/copertina-livreur.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#155E83">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Livreur">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Espace livreur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#F4F7F9;--surface:#fff;--ink:#13222C;--muted:#5D6F7B;--line:#DCE5EB;--bissap:#155E83;--bissap-soft:#E1EEF5;--prep:#E07B0E;--prep-soft:#FCEBD8;--ok:#1F9D5B;--ok-soft:#DDF5E8;--bad:#B3261E;--bad-soft:#FBE3E1;--gold:#B7791F;--gold-soft:#FBF0D9;
+  --f-display:'Bricolage Grotesque',system-ui,sans-serif;--f-body:'Figtree',system-ui,sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0D161C;--surface:#15212A;--ink:#EAF1F5;--muted:#9FB0BB;--line:#26343F;--bissap-soft:#13314A;--prep-soft:#3A2710;--ok-soft:#0F3322;--bad-soft:#3A1715;--gold:#E8B455;--gold-soft:#3A2C10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0D161C;--surface:#15212A;--ink:#EAF1F5;--muted:#9FB0BB;--line:#26343F;--bissap-soft:#13314A;--prep-soft:#3A2710;--ok-soft:#0F3322;--bad-soft:#3A1715;--gold:#E8B455;--gold-soft:#3A2C10;color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.4;min-height:100vh;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+[hidden]{display:none!important}
+main{max-width:520px;margin:0 auto}
+header{padding:18px 2px 12px;display:flex;align-items:center;gap:12px}
+header .mk{width:46px;height:46px;border-radius:14px;background:var(--bissap);color:#fff;display:grid;place-items:center;font-size:24px;flex:none}
+header h1{font-family:var(--f-display);font-weight:800;font-size:22px;margin:0;line-height:1.1}
+header small{display:block;color:var(--muted);font-weight:600;font-size:14px;margin-top:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:12px}
+h2{font-family:var(--f-display);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:20px 2px 8px;font-weight:800}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.tile .k{font-size:13px;color:var(--muted);font-weight:600}.tile .v{font-family:var(--f-display);font-weight:800;font-size:26px;margin-top:2px}
+.tile.money .v{color:var(--gold)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.num{font-family:var(--f-display);font-weight:800;font-size:24px}
+.pill{display:inline-block;border-radius:99px;padding:5px 11px;font-weight:700;font-size:13px;white-space:nowrap}
+.p-prep{background:var(--prep-soft);color:var(--prep)}.p-ok{background:var(--ok-soft);color:var(--ok)}.p-route{background:var(--bissap-soft);color:var(--bissap)}.p-bad{background:var(--bad-soft);color:var(--bad)}.p-done{background:var(--line);color:var(--ink)}
+.muted{color:var(--muted)}.small{font-size:14px}
+.who{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:6px 0}
+.who b{font-size:17px}
+.addr{font-weight:700;font-size:17px;margin:4px 0}
+.items{margin:6px 0;color:var(--muted)}
+.cash{border-radius:14px;padding:12px 14px;font-weight:800;font-size:18px;margin:10px 0}
+.cash.due{background:var(--gold-soft);color:var(--gold)}.cash.paid{background:var(--ok-soft);color:var(--ok);font-size:16px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:0;border-radius:14px;min-height:52px;padding:10px 14px;font:800 17px var(--f-body);cursor:pointer;text-decoration:none;text-align:center;margin-top:8px;color:var(--ink);background:var(--surface);border:1.5px solid var(--line)}
+.btn:disabled{opacity:.55}
+.btn.big{min-height:62px;font-size:19px}
+.btn.go{background:var(--bissap);border-color:var(--bissap);color:#fff}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.warn{color:var(--bad);border-color:var(--bad-soft)}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
+.sm{min-height:42px;font-size:15px;margin-top:0}
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:15px;margin-top:12px}
+input{font:600 18px var(--f-body);padding:13px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);width:100%;min-width:0}
+input:focus,.btn:focus-visible{outline:3px solid var(--bissap);outline-offset:1px}
+.err{color:var(--bad);font-weight:700;min-height:20px;margin-top:8px}
+.empty{text-align:center;color:var(--muted);padding:22px 14px;border:1.5px dashed var(--line);border-radius:18px;margin-bottom:12px}
+.line{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.line:first-child{border-top:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:99px;font-weight:700;z-index:40;max-width:92%;text-align:center}
+.hint{font-size:14px;color:var(--muted);margin-top:6px}
+.note{background:var(--bissap-soft);border-radius:14px;padding:12px 14px;font-size:15px;margin-top:10px}
+.foot{text-align:center;color:var(--muted);font-size:13px;margin-top:18px}
+.foot button{background:none;border:0;color:var(--bissap);font:700 15px var(--f-body);cursor:pointer;padding:8px}
+.demo{background:#7B3FA0;color:#fff;text-align:center;border-radius:12px;padding:8px 10px;font-weight:700;font-size:14px;margin-bottom:12px}
+.spin{display:inline-block;width:18px;height:18px;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <header><div class="mk" aria-hidden="true">🛵</div><div><h1 id="resto">Espace livreur</h1><small id="who">Teranga Resto</small></div></header>
+  <div id="app"><div class="card"><span class="spin"></span> Chargement…</div></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SUPA_URL='https://ncsjgmkrsvtwklfrdbgy.supabase.co';
+const SUPA_KEY='sb_publishable_oDE4BbU6J3RTnce1Oo91cQ_hokWgh0U';
+const PUSH_PUB='BLcHXOxXIRWkIBKizjrAQ0pRpNURUxUGiIlzYgHCGH-aAKLeiGsoL_thiuzOrPAUaF6lWhgOtBFTajqAcmO6sB8';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const F=n=>Math.round(+n||0).toLocaleString('fr-FR').replace(/[\s  ]/g,' ')+' F';
+const tel9=t=>{let d=String(t||'').replace(/\D/g,'');if(d.startsWith('00221'))d=d.slice(5);else if(d.startsWith('221')&&d.length===12)d=d.slice(3);return d.slice(-9)};
+const telFmt=t=>{const d=tel9(t);return d.length===9?d.replace(/(\d\d)(\d{3})(\d\d)(\d\d)/,'$1 $2 $3 $4'):String(t||'')};
+const hhmm=s=>{try{return new Date(s).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}catch(e){return ''}};
+const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+const lsSet=(k,v)=>{try{if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const q=new URLSearchParams(location.search);
+const DEMO=q.get('demo')==='1';
+const CODE=String(q.get('r')||'').trim().toUpperCase();
+const KEY='trliv-'+CODE;
+let SB=null,ACC=lsGet(KEY,null),V=null,ARM='',BUSY=false,timer=null,seen=null,audio=null;
+const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isHome=()=>!!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));
+function toast(m){let t=document.querySelector('.toast');if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}t.textContent=m;clearTimeout(t._t);t._t=setTimeout(()=>t.remove(),3200)}
+function errMsg(e){const m=String(e&&e.message||e||'');return /fetch|network|Failed|Load failed/i.test(m)?'Pas de connexion : réessayez':m.replace(/^.*?ERROR:\s*/,'')}
+function ding(){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();[0,.3].forEach((d,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=i?1318:988;
+  g.gain.setValueAtTime(.0001,audio.currentTime+d);g.gain.exponentialRampToValueAtTime(.5,audio.currentTime+d+.02);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+d+.8);o.connect(g);g.connect(audio.destination);o.start(audio.currentTime+d);o.stop(audio.currentTime+d+.9)})}catch(e){}
+  try{navigator.vibrate&&navigator.vibrate([300,120,300])}catch(e){}}
+function initSB(){if(!SB&&window.supabase)SB=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:false,autoRefreshToken:false}});return SB}
+async function rpc(fn,args){if(!initSB())throw new Error('Pas de connexion : réessayez');const r=await SB.rpc(fn,args);if(r.error)throw new Error(r.error.message);return r.data}
+const call=(act,id,arg)=>rpc('resto_liv_act',{p_code:CODE,p_tel:ACC.tel,p_pin:ACC.pin,p_act:act,p_id:id||'',p_arg:arg||{}});
+
+/* icône de l'écran d'accueil : elle s'ouvre sur cet espace livreur */
+function homeIcon(nom){try{const base=location.href.split(/[?#]/)[0].replace(/livreur\.html$/,''),url=base+'livreur.html?r='+encodeURIComponent(CODE);
+  const mf={name:'Livreur · '+(nom||'Teranga Resto'),short_name:'Livreur',start_url:url,scope:base,display:'standalone',background_color:'#0E4D6E',theme_color:'#155E83',lang:'fr',
+    icons:[{src:base+'icon-192.png',sizes:'192x192',type:'image/png'},{src:base+'icon-512.png',sizes:'512x512',type:'image/png'}]};
+  document.querySelectorAll('link[rel="manifest"]').forEach(l=>l.remove());
+  const l=document.createElement('link');l.rel='manifest';l.href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify(mf));document.head.appendChild(l)}catch(e){}}
+
+/* ---------- Données de la démo ---------- */
+function demoVue(){const n=Date.now(),iso=m=>new Date(n-m*60000).toISOString();
+  return {ok:true,resto:{nom:'Restaurant Teranga (exemple)',tel:'77 879 00 06'},me:{id:'d',nom:'Ibou'},orders:[
+    {id:'a',n:12,date:iso(25),statut:'prete',client:{nom:'Awa Ndiaye',tel:'770000002',quartier:'Liberté 6, près de la pharmacie',geo:{lat:14.7167,lng:-17.4677}},items:[{q:2,nom:'Thiéboudienne'},{q:2,nom:'Bissap'}],note:'Sans piment',frais:500,total:6500,du:6500,paye:false},
+    {id:'b',n:14,date:iso(12),statut:'cuisine',client:{nom:'Moussa Fall',tel:'770000006',quartier:'Sacré-Cœur 3, villa 12'},items:[{q:1,nom:'Yassa poulet'}],note:'',frais:500,total:3500,du:0,paye:true,mode:'wave'},
+    {id:'c',n:9,date:iso(80),statut:'servie',client:{nom:'Bineta Sow',tel:'770000007',quartier:'Point E'},items:[{q:3,nom:'Mafé'}],frais:1000,total:7000,du:7000,paye:false,livFait:iso(40),livDu:7000}]}}
+
+/* ---------- Écrans ---------- */
+function render(){const A=$('app');
+  if(!CODE&&!DEMO){A.innerHTML='<div class="card"><b>Lien incomplet</b><div class="hint">Demandez au restaurant de vous renvoyer votre lien d\'accès.</div></div>';return}
+  if(!ACC&&!DEMO)return renderLogin(A);
+  if(!V){A.innerHTML='<div class="card"><span class="spin"></span> Chargement…</div>';return}
+  $('resto').textContent=V.resto.nom||'Espace livreur';$('who').textContent='Livreur · '+(V.me.nom||'');document.title='Livreur · '+(V.resto.nom||'');
+  const O=V.orders||[],act=O.filter(o=>!o.livFait).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const done=O.filter(o=>o.livFait).sort((a,b)=>String(b.livFait).localeCompare(String(a.livFait)));
+  const surMoi=done.filter(o=>!o.livVerse&&!o.paye&&+o.livDu>0),argent=surMoi.reduce((s,o)=>s+(+o.livDu||0),0);
+  A.innerHTML=(DEMO?'<div class="demo">Exemple : rien n\'est envoyé au restaurant</div>':'')+
+    '<div class="tiles"><div class="tile"><div class="k">À livrer</div><div class="v">'+act.length+'</div></div><div class="tile money"><div class="k">Argent sur moi</div><div class="v">'+F(argent)+'</div></div></div>'+
+    '<h2>À livrer · '+act.length+'</h2>'+(act.length?act.map(card).join(''):'<div class="empty">Pas de livraison pour vous. Le téléphone sonne quand le restaurant vous en donne une.</div>')+
+    '<h2>Livrées · '+done.length+'</h2>'+(done.length?'<div class="card">'+done.map(o=>'<div class="line"><span><b>n°'+esc(o.n)+'</b> · '+esc(o.client.quartier||o.client.nom||'')+'<div class="small muted">Livrée à '+hhmm(o.livFait)+'</div></span><span style="text-align:right"><b>'+(+o.livDu>0?F(o.livDu):'—')+'</b><div class="small '+(+o.livDu>0&&!o.livVerse&&!o.paye?'':'muted')+'">'+(+o.livDu>0?(o.livVerse||o.paye?'remis ✓':'à remettre'):'rien encaissé')+'</div></span></div>').join('')+
+      (argent>0?'<div class="note">Remettez <b>'+F(argent)+'</b> à la caisse du restaurant. La caisse le note, et ici ça passe à « remis ✓ ».</div>':'')+'</div>':'<div class="empty">Rien encore aujourd\'hui.</div>')+
+    pushCard()+
+    '<div class="foot">'+(V.resto.tel?'Restaurant : <b>'+esc(telFmt(V.resto.tel))+'</b> · ':'')+'<button data-a="out">Sortir</button></div>';
+  pushPaint()}
+function card(o){const c=o.client||{},pos=c.geo&&isFinite(c.geo.lat)?c.geo:null,ar=ARM;
+  const st=o.livRetour?['p-bad','↩️ Client absent']:o.livPart?['p-route','🛵 En route']:o.statut==='cuisine'?['p-prep','🔥 En préparation']:['p-ok','✅ Prête : venez la chercher'];
+  const nav=pos?'https://www.google.com/maps/dir/?api=1&destination='+pos.lat+','+pos.lng:c.maps&&/^https:\/\//.test(c.maps)?c.maps:c.quartier?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(c.quartier):'';
+  const t=tel9(c.tel);
+  return '<article class="card"><div class="top"><span class="num">n°'+esc(o.n)+'</span><span class="pill '+st[0]+'">'+st[1]+'</span></div>'+
+    '<div class="addr">📍 '+esc(c.quartier||'Adresse à demander au client')+'</div>'+
+    (nav?'<a class="btn sm" href="'+esc(nav)+'" target="_blank" rel="noopener">🗺️ Itinéraire'+(pos?' (position exacte)':'')+'</a>':'')+
+    '<div class="who"><span><b>'+esc(c.nom||'Client')+'</b> · '+esc(telFmt(c.tel))+'</span></div>'+
+    (t.length===9?'<div class="row"><a class="btn sm" href="tel:+221'+t+'">📞 Appeler</a><a class="btn sm" href="https://wa.me/221'+t+'" target="_blank" rel="noopener">💬 WhatsApp</a></div>':'')+
+    '<div class="items">'+(o.items||[]).map(i=>esc(i.q)+' × '+esc(i.nom)).join(' · ')+'</div>'+(o.note?'<div class="small"><b>Note :</b> '+esc(o.note)+'</div>':'')+
+    (o.livRetour?'<div class="note" style="margin-top:0;margin-bottom:8px">↩️ Rapportez la commande au restaurant. Si le client rappelle, touchez « Je pars ».</div>':'')+
+    (+o.du>0?'<div class="cash due">💰 À encaisser : '+F(o.du)+'</div>':'<div class="cash paid">✅ Déjà payé : rien à encaisser</div>')+
+    (o.livPart?'':'<button class="btn go big" data-a="route" data-id="'+esc(o.id)+'"'+(BUSY?' disabled':'')+'>🛵 Je pars avec la commande</button>')+
+    '<button class="btn ok big" data-a="livre" data-id="'+esc(o.id)+'"'+(BUSY?' disabled':'')+'>'+(ar==='livre:'+o.id?'Sûr ? Touchez encore':'✅ LIVRÉ'+(+o.du>0?' · j\'encaisse '+F(o.du):''))+'</button>'+
+    '<button class="btn warn sm" style="margin-top:8px" data-a="retour" data-id="'+esc(o.id)+'"'+(BUSY?' disabled':'')+'>'+(ar==='retour:'+o.id?'Sûr ? Touchez encore':'Client absent : je reviens')+'</button></article>'}
+function renderLogin(A){const last=lsGet('trliv-last-'+CODE,{});
+  A.innerHTML='<form class="card" id="fLog"><b style="font-size:19px">Entrez dans votre espace</b><div class="hint">Le restaurant vous a envoyé un code de 4 chiffres sur WhatsApp.</div>'+
+    '<label class="f">Mon numéro<input id="l_tel" inputmode="tel" autocomplete="tel" value="'+esc(last.tel||'')+'" placeholder="77 123 45 67"></label>'+
+    '<label class="f">Mon code (4 chiffres)<input id="l_pin" inputmode="numeric" maxlength="4" autocomplete="one-time-code" placeholder="••••"></label>'+
+    '<div class="err" id="l_err" role="alert"></div><button class="btn go big" id="l_btn" type="submit">Entrer</button></form>'}
+/* ---------- Avis sur le téléphone ---------- */
+function pushOk(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window}
+function pushCard(){return '<h2>Avis sur ce téléphone</h2><div class="card" id="pushbox"><span class="spin"></span></div>'}
+async function pushSub(){try{const r=await navigator.serviceWorker.getRegistration();return r?await r.pushManager.getSubscription():null}catch(e){return null}}
+async function pushPaint(){const b=$('pushbox');if(!b)return;
+  if(DEMO){b.innerHTML='<div class="hint">Avec votre vrai accès, le téléphone sonne à chaque nouvelle livraison, même fermé.</div>';return}
+  if(isIOS&&!isHome()){b.innerHTML='<div><b>Pour être prévenu même téléphone fermé :</b></div><div class="hint">Dans Safari touchez <b>Partager</b> (le carré avec la flèche) → <b>Sur l\'écran d\'accueil</b>. Ouvrez l\'espace depuis la nouvelle icône, puis revenez ici.</div>';return}
+  if(!pushOk()){b.innerHTML='<div class="hint">Ce navigateur ne reçoit pas les avis. Gardez la page ouverte : elle sonne quand une livraison arrive.</div>';return}
+  const s=Notification.permission==='granted'?await pushSub():null;
+  b.innerHTML=s?'<div>🔔 <b>Avis activés</b> : vous êtes prévenu même téléphone fermé.</div><button class="btn sm" style="margin-top:10px" data-a="ptest">Envoyer un avis de test</button>'
+    :'<div class="hint">Le téléphone sonne à chaque nouvelle livraison, même fermé.</div><button class="btn go" data-a="pon">🔔 Activer les avis</button>'}
+function b64u(s){s=String(s).replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const r=atob(s);return Uint8Array.from(r,c=>c.charCodeAt(0))}
+async function pushOn(){try{const p=await Notification.requestPermission();if(p!=='granted'){toast('Avis refusés : autorisez-les dans les réglages du téléphone');return}
+  let r=await navigator.serviceWorker.getRegistration();if(!r)r=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
+  let s=await r.pushManager.getSubscription();if(!s)s=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(PUSH_PUB)});
+  const x=await rpc('resto_liv_push_save',{p_code:CODE,p_tel:ACC.tel,p_pin:ACC.pin,p_sub:s.toJSON()});if(!x||!x.ok)throw new Error(x&&x.erreur||'Erreur');
+  toast('Avis activés ✅');await rpc('resto_liv_push_test',{p_code:CODE,p_tel:ACC.tel,p_pin:ACC.pin});pushPaint()}catch(e){toast('Je n\'arrive pas à activer les avis : '+errMsg(e))}}
+async function pushResync(){try{if(DEMO||!ACC||!pushOk()||Notification.permission!=='granted')return;const s=await pushSub();if(s)rpc('resto_liv_push_save',{p_code:CODE,p_tel:ACC.tel,p_pin:ACC.pin,p_sub:s.toJSON()}).catch(()=>{})}catch(e){}}
+/* ---------- Lecture et actions ---------- */
+function setV(v,notify){if(!v||!v.ok)return;const ids=new Set((v.orders||[]).filter(o=>!o.livFait).map(o=>o.id+':'+o.statut));
+  if(notify&&seen){let nv=0;ids.forEach(k=>{if(!seen.has(k))nv++});if(nv){ding();toast('Nouvelle livraison ou commande prête')}}
+  seen=ids;V=v;lsSet(KEY+'-v',v);homeIcon(v.resto&&v.resto.nom)}
+async function load(notify){if(DEMO){setV(demoVue());render();return}
+  if(!ACC)return;try{const v=await rpc('resto_liv',{p_code:CODE,p_tel:ACC.tel,p_pin:ACC.pin});
+    if(!v||!v.ok){lsSet(KEY,null);ACC=null;V=null;render();toast(v&&v.erreur||'Votre accès a changé : entrez de nouveau');return}
+    setV(v,notify);if(!BUSY)render()}
+  catch(e){const m=errMsg(e);if(/fermé|formule/i.test(m)){$('app').innerHTML='<div class="card"><b>'+esc(m)+'</b><div class="hint">Appelez le restaurant.</div></div>';return}if(!V)render();toast(m)}}
+function poll(){clearTimeout(timer);timer=setTimeout(async()=>{if(document.visibilityState==='visible'&&!BUSY)await load(true);poll()},15000)}
+async function act(a,id){if(DEMO){const o=V.orders.find(x=>x.id===id);if(o){const t=new Date().toISOString();if(a==='route')o.livPart=t;if(a==='livre'){o.livFait=t;o.livDu=o.du}if(a==='retour'){o.livRetour=t;o.livPart=null}}render();toast('Exemple : rien n\'est envoyé');return}
+  BUSY=true;render();try{const v=await call(a,id,{});setV(v);toast(a==='livre'?'Livraison notée ✓':a==='route'?'Bonne route 🛵':'Le restaurant est prévenu')}catch(e){toast(errMsg(e))}BUSY=false;ARM='';render()}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,id=el.dataset.id;
+  if(a==='out'){lsSet(KEY,null);ACC=null;V=null;seen=null;render();return}
+  if(a==='pon'){pushOn();return}
+  if(a==='ptest'){rpc('resto_liv_push_test',{p_code:CODE,p_tel:ACC.tel,p_pin:ACC.pin}).then(()=>toast('Avis de test envoyé')).catch(x=>toast(errMsg(x)));return}
+  if(a==='route'){act('route',id);return}
+  if(a==='livre'||a==='retour'){if(ARM!==a+':'+id){ARM=a+':'+id;render();setTimeout(()=>{if(ARM===a+':'+id){ARM='';render()}},6000);return}act(a,id);return}});
+document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id!=='fLog')return;
+  const tel=tel9($('l_tel').value),pin=String($('l_pin').value).replace(/\D/g,''),say=t=>{$('l_err').textContent=t};
+  if(tel.length<9)return say('Écrivez votre numéro (9 chiffres)');if(pin.length!==4)return say('Le code a 4 chiffres');
+  const b=$('l_btn');b.disabled=true;b.innerHTML='<span class="spin"></span>';
+  try{const v=await rpc('resto_liv',{p_code:CODE,p_tel:tel,p_pin:pin});if(!v||!v.ok)throw new Error(v&&v.erreur||'Numéro ou code incorrect');
+    ACC={tel,pin};lsSet(KEY,ACC);lsSet('trliv-last-'+CODE,{tel});setV(v);render();poll();pushResync()}
+  catch(err){b.disabled=false;b.textContent='Entrer';say(errMsg(err))}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&ACC&&!BUSY)load(true)});
+document.addEventListener('pointerdown',()=>{try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state!=='running')audio.resume()}catch(e){}},{once:true});
+/* ---------- Démarrage ---------- */
+if(CODE)homeIcon('');
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+if(DEMO){load(false)}
+else if(ACC){V=lsGet(KEY+'-v',null);render();load(false).then(()=>{poll();pushResync()})}
+else render();
+</script>
+</body>
+</html>

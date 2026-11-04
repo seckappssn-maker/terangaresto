@@ -453,7 +453,8 @@ function removeLocal(col,id){if(col==='page'){delete S.page;return}if(S[col])S[c
 function applyRow(row){const k=row.col+'|'+row.id,cur=rowsOf(),local=cur[k];
   if(local&&JSON.stringify(local)!==snap[k])return false;
   if(row.col==='orders'&&!row.deleted&&row.data&&!row.data.annule){if(row.data.statut==='prete'&&local&&local.statut==='cuisine')pretQueue.push(row.data);
-   else if(row.data.statut==='cuisine'&&(!local||local.statut!=='cuisine'))cuisQueue.push([row.data,!!local])}
+   else if(row.data.statut==='cuisine'&&(!local||local.statut!=='cuisine'))cuisQueue.push([row.data,!!local]);
+   if(local&&(row.data.livFait&&!local.livFait||row.data.livRetour&&row.data.livRetour!==local.livRetour))livQueue.push(row.data)}
   if(row.deleted){delete snap[k];if(!local)return false;removeLocal(row.col,row.id);return true}
   if(!row.data||typeof row.data!=='object')return false;
   if(row.col!=='set'&&row.col!=='page'&&!row.data.id)row.data.id=row.id;
@@ -477,12 +478,13 @@ async function pull(full){if(DEMO||!SB||!USER)return false;let changed=false,max
 async function sync(full){if(DEMO||!SB||!USER||syncing)return;syncing=true;let ch=false;
   try{if(full){ch=await pull(true);await push()}else{await push();ch=await pull(false)}if(syncSt!=='err')setSyncSt('ok')}catch(e){setSyncSt('err',e)}finally{syncing=false}
   if(ch||tab==='cuisine'||tab==='ecran')softRender();
-  if(full){pretQueue=[];cuisQueue=[]}
+  if(full){pretQueue=[];cuisQueue=[];livQueue=[]}
+  if(livQueue.length){const q=livQueue.splice(0);q.forEach(annonceLiv)}
   if(pretQueue.length){const q=pretQueue.splice(0);q.forEach(annoncePrete)}
   if(cuisQueue.length){const q=cuisQueue.splice(0);q.forEach(([o,aj])=>annonceCuisine(o,aj))}
   fetchWeb()}
 /* ---------- Annonce « commande prête » (caisse / serveur) ---------- */
-let pretQueue=[],cuisQueue=[];
+let pretQueue=[],cuisQueue=[],livQueue=[];
 let voixOn=(()=>{try{return localStorage.getItem('terangaResto_voix')!=='off'}catch(e){return true}})();
 let audioCtx=null;
 function unlockAudio(){try{if(!audioCtx){const A=window.AudioContext||window.webkitAudioContext;if(A)audioCtx=new A()}if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();if(window.speechSynthesis&&!unlockAudio.done){const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);unlockAudio.done=true}}catch(e){}}
@@ -506,6 +508,13 @@ function annoncePrete(o){if(!me||me.role==='cuisine'||tab==='ecran')return;if(me
   const ou=o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison'+(o.client&&o.client.quartier?' · '+o.client.quartier:''):'À emporter'+(o.client&&o.client.nom?' · '+o.client.nom:'');
   bandeau(`<div><div class="big">🔔 n°${o.n} ${t('Prête')} !</div><div class="sm">${esc(ou)} · ${o.items.map(i=>i.q+' × '+esc(i.nom)).join(', ')}</div></div>`,'#1E7FD8');
   if(voixOn)setTimeout(()=>parler(`Commande numéro ${o.n} prête. `+(o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison':'À emporter')),700)}
+function annonceLiv(o){if(!me||me.role==='cuisine'||me.role==='serveur'||tab==='ecran')return;const nom=o.livPar||o.livreur||'Le livreur';
+  if(o.livFait){if(Date.now()-new Date(o.livFait).getTime()>15*60000)return;const du=+o.livDu||0;
+    bandeau(`<div><div class="big">🛵 n°${o.n} livrée</div><div class="sm">${esc(nom)}${du>0?' a encaissé '+F(du)+' : il doit le remettre à la caisse':' · rien à encaisser'}</div></div>`,'#1F9D5B');
+    if(voixOn)setTimeout(()=>parler(`Commande numéro ${o.n} livrée`),700);return}
+  if(o.livRetour){if(Date.now()-new Date(o.livRetour).getTime()>15*60000)return;
+    bandeau(`<div><div class="big">↩️ n°${o.n} : client absent</div><div class="sm">${esc(nom)} revient avec la commande${o.livRetourNote?' · '+esc(o.livRetourNote):''}</div></div>`,'#B3261E');
+    if(voixOn)setTimeout(()=>parler(`Commande numéro ${o.n}, client absent`),700)}}
 /* ---------- Commandes en ligne (page clients) ---------- */
 let WEB=[],webSeen=null,webOff=false,webBusy=false;
 function webVoit(){return !!me&&(me.role==='patron'||me.role==='caissier'||isP())}
@@ -533,7 +542,7 @@ function vWeb(){if(!webVoit()||!WEB.length)return '';
    return `<article class="order s-web">
     <div class="row between"><span class="row" style="gap:10px"><span class="ostat" style="--oc:#7B3FA0">🌐 ${resa?'Réservation':'En ligne'}</span><span class="tag t-neutre">${esc(webOu(d))}</span></span><span class="muted">${new Date(w.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
     <div><b>${esc(d.nom||'')}</b> ${esc(d.tel||'')}</div>
-    ${d.mode==='livraison'?`<div>📍 ${esc(d.adr||'')}</div>`:''}
+    ${d.mode==='livraison'?`<div>📍 ${esc(d.adr||'')}${geoOf(d.geo).geo?` · <a href="${geoUrl(geoOf(d.geo))}" target="_blank" rel="noopener"><b>position envoyée ✓</b></a>`:''}</div>`:''}
     ${d.mode==='place'?`<div>📅 ${fd(d.date)} ${esc(d.heure||'')} · ${+d.pers||1} pers.</div>`:d.heure?`<div>🕐 ${esc(d.heure)}</div>`:`<div class="muted">🕐 ${t('Dès que possible')}</div>`}
     ${I.length?`<div>${I.map(i=>i.q+' × '+esc(i.nom)).join(', ')}${d.frais?' + '+t('Livraison').toLowerCase()+' '+F(d.frais):''}</div>`:''}
     ${d.note?`<div><b>Note :</b> ${esc(d.note)}</div>`:''}
@@ -548,7 +557,7 @@ async function webConfirmer(id){const w=WEB.find(x=>x.id===id);if(!w)return;cons
       return{pid:i.pid,nom:p?(i.t?p.nom+' ('+i.t+')':p.nom):i.nom,prix:tl?+tl.p||0:+i.prix||0,q:+i.q||1,...(i.t?{t:i.t}:{})}});
     const notes=[d.heure?'Heure : '+d.heure:'',d.note||''].filter(Boolean).join(' · ');
     const typ=d.mode==='livraison'?'livraison':d.mode==='emporter'?'emporter':'place';
-    const o={id:uid(),n,date:new Date().toISOString(),type:typ,table:'',client:{nom:d.nom||'',tel:d.tel||'',quartier:[d.zone,d.adr].filter(Boolean).join(' · ')},frais:typ==='livraison'?+d.frais||0:0,items,note:notes,statut:items.some(enCuis)?'cuisine':'prete',paye:false,par:'En ligne',parId:'web',web:true,webId:id,tk:tkGen()};
+    const o={id:uid(),n,date:new Date().toISOString(),type:typ,table:'',client:{nom:d.nom||'',tel:d.tel||'',quartier:[d.zone,d.adr].filter(Boolean).join(' · '),...geoOf(d.geo)},frais:typ==='livraison'?+d.frais||0:0,items,note:notes,statut:items.some(enCuis)?'cuisine':'prete',paye:false,par:'En ligne',parId:'web',web:true,webId:id,tk:tkGen()};
     if(!await webMaj(id,'accepte',n))return;
     S.orders.push(o);save()}
   else if(!await webMaj(id,'accepte'))return;
@@ -571,9 +580,9 @@ function abPrix(){return (AB&&AB.price)||({essentiel:5000,pro:10000,premium:1500
 /* ---------- Formules et rôles ---------- */
 const FORMULES={
   essentiel:{nom:'Essentiel',prix:'5 000 F / mois',roles:['caissier'],feat:[]},
-  pro:{nom:'Pro',prix:'10 000 F / mois',roles:['caissier','cuisine'],feat:['cuisine','abonnes','events','staff','stock']},
-  premium:{nom:'Premium',prix:'15 000 F / mois',roles:['caissier','cuisine','serveur'],feat:['cuisine','abonnes','events','staff','stock','serveur']}};
-const ROLES={patron:'Patron',caissier:'Caissier',serveur:'Serveur',cuisine:'Cuisine',livreur:'Livreur (sans code)',autre:'Sans accès'};
+  pro:{nom:'Pro',prix:'10 000 F / mois',roles:['caissier','cuisine'],feat:['cuisine','abonnes','events','staff','stock','livreurs']},
+  premium:{nom:'Premium',prix:'15 000 F / mois',roles:['caissier','cuisine','serveur'],feat:['cuisine','abonnes','events','staff','stock','serveur','livreurs']}};
+const ROLES={patron:'Patron',caissier:'Caissier',serveur:'Serveur',cuisine:'Cuisine',livreur:'Livreur',autre:'Sans accès'};
 const has=f=>(FORMULES[S.set.formule]||FORMULES.essentiel).feat.includes(f);
 const roleOk=r=>r==='patron'||r!=='livreur'&&r!=='autre'&&(FORMULES[S.set.formule]||FORMULES.essentiel).roles.includes(r);
 const ME_KEY='terangaResto_me';
@@ -640,7 +649,7 @@ const todayOrders=()=>S.orders.filter(o=>dk(o.date)===dk(new Date()));
 /* ---------- Navigation ---------- */
 let tab='caisse', sub=null, periode='jour', catF='Rapide', cmdF='encours';
 let cart=newCart();
-function newCart(){return{type:'place',table:'',nom:'',tel:'',quartier:'',frais:S?+S.set.fraisLiv||0:0,livreur:'',livTel:'',livSel:'',note:'',items:{},addTo:''}}
+function newCart(){return{type:'place',table:'',nom:'',tel:'',quartier:'',maps:'',frais:S?+S.set.fraisLiv||0:0,livreur:'',livTel:'',livSel:'',note:'',items:{},addTo:''}}
 const IC={
  caisse:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M7 6V4h10v2M3 11h18M8 15h2"/></svg>',
  commandes:'<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>',
@@ -788,7 +797,9 @@ function vCaisse(){
          <option value="">— Choisir plus tard —</option>
          ${S.staff.filter(s=>s.role==='livreur').map(s=>`<option value="s:${s.id}" ${cart.livSel==='s:'+s.id?'selected':''}>${esc(s.nom)} (du resto)</option>`).join('')}
          ${S.livExt.map((l,i)=>`<option value="e:${i}" ${cart.livSel==='e:'+i?'selected':''}>${esc(l.nom)} (externe)</option>`).join('')}
+         ${S.set.livCode?`<option value="tl" ${cart.livSel==='tl'?'selected':''}>🛵 ${esc(tlNom())} (société de livraison)</option>`:''}
          <option value="new" ${cart.livSel==='new'?'selected':''}>+ Livreur externe</option></select></label></div>
+       <label class="f">Position du client (facultatif)<input id="c_maps" inputmode="url" autocomplete="off" placeholder="Collez le lien de position envoyé par le client sur WhatsApp" value="${esc(cart.maps)}" oninput="cart.maps=this.value"></label>
        ${cart.livSel==='new'?`<div class="row"><label class="f">Nom du livreur<input id="c_ln" value="${esc(cart.livreur)}" oninput="cart.livreur=this.value"></label><label class="f">Son téléphone<input id="c_lt" inputmode="tel" value="${esc(cart.livTel)}" oninput="cart.livTel=this.value"></label></div>`:''}`:''}`}
     <div>${lines.map(l=>`<div class="line"><div class="g"><b>${esc(l.nom)}</b><div class="muted">${F(l.prix)}</div></div>
        <div class="qty"><button onclick="decP(decodeURIComponent('${encK(l.key)}'))" aria-label="Moins">−</button><b style="min-width:22px;text-align:center">${l.q}</b><button onclick="addK(decodeURIComponent('${encK(l.key)}'))" aria-label="Plus">+</button></div></div>`).join('')||`<div class="empty">${t('Touchez un plat pour l\'ajouter.')}</div>`}</div>
@@ -814,12 +825,14 @@ function valider(payer){
     if(cart.note)o.cuisineNote=cart.note;else delete o.cuisineNote;
     o.statut='cuisine';save();cart=newCart();toast(t('Ajout')+' n°'+o.n+' → '+t('Cuisine'));go('commandes');return}
   if(cart.type==='livraison'&&String(cart.tel||'').replace(/\D/g,'').length<7){toast('Livraison : écrivez le téléphone du client');return}
-  if(cart.type!=='livraison'){cart.tel='';cart.quartier=''}
+  if(cart.type!=='livraison'){cart.tel='';cart.quartier='';cart.maps=''}
+  const pos=cart.type==='livraison'?mapsOf(cart.maps):{};if(cart.type==='livraison'&&String(cart.maps||'').trim()&&!pos.geo&&!pos.maps){toast('Position : collez un lien qui commence par https://, ou laissez vide');return}
   const n=Math.max(0,...todayOrders().map(o=>o.n))+1;
-  const o={id:uid(),n,date:new Date().toISOString(),type:cart.type,table:cart.table,client:{nom:cart.nom,tel:cart.tel,quartier:cart.quartier},frais:cart.type==='livraison'?+cart.frais||0:0,items,note:cart.note,statut:items.some(enCuis)?'cuisine':'prete',paye:false,par:me.nom,parId:me.id||'patron',tk:tkGen()};
+  const o={id:uid(),n,date:new Date().toISOString(),type:cart.type,table:cart.table,client:{nom:cart.nom,tel:cart.tel,quartier:cart.quartier,...pos},frais:cart.type==='livraison'?+cart.frais||0:0,items,note:cart.note,statut:items.some(enCuis)?'cuisine':'prete',paye:false,par:me.nom,parId:me.id||'patron',tk:tkGen()};
   numApres=numAuto(o)?o.id:null;
+  const viaTL=cart.type==='livraison'&&cart.livSel==='tl';
   if(cart.type==='livraison')applyLiv(o,cart.livSel,cart.livreur,cart.livTel);
-  S.orders.push(o);save();cart=newCart();
+  S.orders.push(o);save();cart=newCart();if(viaTL)tlSend(o.id);
   if(payer==='especes'){render();cashModal(o.id)}
   else if(payer==='wave'||payer==='om'){finishPay(o,payer)}
   else if(payer){render();payModal(o.id)}
@@ -846,14 +859,15 @@ function drawCash(){const o=S.orders.find(x=>x.id===cashId),T=tot(o);
    <button class="btn ghost full" onclick="closeM();render();toast('n°${o.n} · ${t('À payer')}')">${t('Payer plus tard')}</button>`)}
 
 /* ---------- Livreurs ---------- */
-function applyLiv(o,sel,nom,tel){
+function applyLiv(o,sel,nom,tel){const avant=o.livreurId||'';
   delete o.livreurId;o.livreur='';o.livreurTel='';o.livExterne=false;
   if(sel&&sel.startsWith('s:')){const s=S.staff.find(x=>x.id===sel.slice(2));if(s){o.livreurId=s.id;o.livreur=s.nom;o.livreurTel=s.tel||''}}
   else if(sel&&sel.startsWith('e:')){const l=S.livExt[+sel.slice(2)];if(l){o.livreur=l.nom;o.livreurTel=l.tel;o.livExterne=true}}
   else if(sel==='new'&&(nom||'').trim()){o.livreur=nom.trim();o.livreurTel=tel||'';o.livExterne=true;
     if(!S.livExt.some(l=>l.nom===o.livreur&&l.tel===o.livreurTel))S.livExt.push({nom:o.livreur,tel:o.livreurTel})}
+  if((o.livreurId||'')!==avant){delete o.livPart;delete o.livRetour;delete o.livRetourNote}
 }
-function livTxt(o){const T=tot(o);return `*${S.set.nom}* – Livraison n°${o.n}\nClient : ${o.client.nom||'-'}\nTél client : ${o.client.tel||'-'}\nAdresse : ${o.client.quartier||'-'}\n\n${o.items.map(i=>`${i.q} x ${i.nom}`).join('\n')}${o.note?`\nNote : ${o.note}`:''}\n\n${o.paye&&o.mode!=='credit'?`✅ Déjà payé (${MODES[o.mode]}) – ne rien encaisser`:`💰 À encaisser : *${F(T)}*`}\nLivraison incluse : ${F(o.frais)}\n\nMerci d'appeler le restaurant au ${S.set.tel} après la livraison.`}
+function livTxt(o){const T=tot(o);return `*${S.set.nom}* – Livraison n°${o.n}\nClient : ${o.client.nom||'-'}\nTél client : ${o.client.tel||'-'}\nAdresse : ${o.client.quartier||'-'}${geoUrl(o.client)?`\n📍 Position du client : ${geoUrl(o.client)}`:''}\n\n${o.items.map(i=>`${i.q} x ${i.nom}`).join('\n')}${o.note?`\nNote : ${o.note}`:''}\n\n${o.paye&&o.mode!=='credit'?`✅ Déjà payé (${MODES[o.mode]}) – ne rien encaisser`:`💰 À encaisser : *${F(T)}*`}\nLivraison incluse : ${F(o.frais)}\n\n${livAccesOn(S.staff.find(s=>s.id===o.livreurId))?`Touchez « LIVRÉ » dans votre espace livreur : ${livLink()}`:`Merci d'appeler le restaurant au ${S.set.tel} après la livraison.`}`}
 function waLivreur(id){const o=S.orders.find(x=>x.id===id);if(!o.livreurTel){toast('Pas de numéro pour ce livreur');return}openWA(o.livreurTel,livTxt(o))}
 let livSel2='',livN2='',livT2='';
 function livModal(id){const o=S.orders.find(x=>x.id===id);livSel2=o.livreurId?'s:'+o.livreurId:'';livN2='';livT2='';drawLiv(id)}
@@ -862,10 +876,110 @@ function drawLiv(id){
    <label class="f">${t('Livreur')}<select id="lv_s" onchange="livSel2=this.value;drawLiv('${id}')"><option value="">— Aucun —</option>
     ${S.staff.filter(s=>s.role==='livreur').map(s=>`<option value="s:${s.id}" ${livSel2==='s:'+s.id?'selected':''}>${esc(s.nom)} (du resto)</option>`).join('')}
     ${S.livExt.map((l,i)=>`<option value="e:${i}" ${livSel2==='e:'+i?'selected':''}>${esc(l.nom)} (externe)</option>`).join('')}
+    ${S.set.livCode&&!S.orders.find(x=>x.id===id).tl?`<option value="tl" ${livSel2==='tl'?'selected':''}>🛵 ${esc(tlNom())} (société de livraison)</option>`:''}
     <option value="new" ${livSel2==='new'?'selected':''}>+ Livreur externe</option></select></label>
    ${livSel2==='new'?`<div class="row"><label class="f">Nom<input id="lv_n" value="${esc(livN2)}" oninput="livN2=this.value"></label><label class="f">${t('Téléphone')}<input id="lv_t" inputmode="tel" value="${esc(livT2)}" oninput="livT2=this.value"></label></div>`:''}
-   <button class="btn full" onclick="const o=S.orders.find(x=>x.id==='${id}');applyLiv(o,livSel2,livN2,livT2);save();closeM();render();toast(o.livreur?'Livreur : '+o.livreur:'Aucun livreur')">${t('Enregistrer')}</button>
+   <button class="btn full" onclick="livSave('${id}')">${livSel2==='tl'?'🛵 Envoyer à '+esc(tlNom()):t('Enregistrer')}</button>
    <button class="btn ghost full" onclick="closeM()">${t('Annuler')}</button>`)}
+
+/* ---------- Position du client ---------- */
+function geoOf(g){if(!g||typeof g!=='object')return{};const lat=+g.lat,lng=+g.lng;
+  if(!isFinite(lat)||!isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180||(!lat&&!lng))return{};
+  const r={lat:+lat.toFixed(6),lng:+lng.toFixed(6)};if(isFinite(+g.acc)&&+g.acc>0)r.acc=Math.round(+g.acc);return{geo:r}}
+function mapsOf(v){v=String(v||'').trim();if(!v)return{};const m=v.match(/^(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/)||v.match(/(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/);
+  if(m){const g=geoOf({lat:m[1],lng:m[2]});if(g.geo)return g}
+  const u=v.match(/https:\/\/\S+/);return u?{maps:u[0].slice(0,300)}:{}}
+function geoUrl(c){if(!c)return '';const g=geoOf(c.geo);if(g.geo)return 'https://maps.google.com/?q='+g.geo.lat+','+g.geo.lng;return c.maps&&/^https:\/\//.test(c.maps)?c.maps:''}
+/* ---------- Espace livreur (numéro + code) ---------- */
+function livBase(){try{if(/github\.io$/i.test(location.hostname))return new URL('livreur.html',location.href).href.split('?')[0].split('#')[0]}catch(e){}return 'https://seckappssn-maker.github.io/terangaresto/livreur.html'}
+function livLink(){if(DEMO)return livBase()+'?demo=1';return AB&&AB.page_code?livBase()+'?r='+AB.page_code:''}
+function livCodeNew(){let c;do{c=String(1000+Math.floor(Math.random()*9000))}while(S.staff.some(x=>x.lcode===c));return c}
+const livAccesOn=s=>!!(s&&s.role==='livreur'&&s.lacces&&s.lcode&&has('livreurs'));
+function livAccesTxt(s){return `Bonjour ${s.nom} 👋\nVoici votre espace livreur de *${S.set.nom}* 🛵\n\n1. Ouvrez ce lien : ${livLink()}\n2. Votre numéro : ${s.tel}\n3. Votre code : *${s.lcode}*\n\nVous verrez vos livraisons : adresse et position du client, montant à encaisser. Touchez « LIVRÉ » quand c'est fait.\nPour être prévenu même téléphone fermé : ajoutez la page sur l'écran d'accueil, puis « Activer les avis ».`}
+function livAccesModal(id){const s=S.staff.find(x=>x.id===id);if(!s)return;
+  modal(`<h2>Accès de ${esc(s.nom)}</h2>
+   <div>Envoyez-lui ce message sur WhatsApp : il ouvre le lien et entre avec son numéro et son code.</div>
+   <div class="linkbox">${esc(livLink())}</div>
+   <div class="row between"><span>Numéro</span><b>${esc(s.tel)}</b></div><div class="row between"><span>Code d'accès</span><b style="font-size:22px;letter-spacing:.1em">${esc(s.lcode)}</b></div>
+   <button class="btn ok full" onclick="openWA('${esc(s.tel)}',livAccesTxt(S.staff.find(x=>x.id==='${id}')))">Envoyer sur WhatsApp</button>
+   <button class="btn alt full" onclick="copyTxt(livAccesTxt(S.staff.find(x=>x.id==='${id}')))">Copier le message</button>
+   <div class="muted" style="font-size:14px">Pour lui retirer l'accès : Modifier → décochez « Espace livreur », ou changez son code.</div>
+   <button class="btn ghost full" onclick="closeM()">${t('Fermer')}</button>`)}
+function livSave(id){const o=S.orders.find(x=>x.id===id);if(!o)return;
+  if(livSel2==='tl'){closeM();tlSend(id);return}
+  applyLiv(o,livSel2,livN2,livT2);save();closeM();render();toast(o.livreur?'Livreur : '+o.livreur:'Aucun livreur')}
+const hm=iso=>{try{return new Date(iso).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}catch(e){return ''}};
+const chezLiv=o=>!o.annule&&o.type==='livraison'&&o.livFait&&+o.livDu>0&&!o.paye&&!o.livVerse;
+function livRow(o){const cais=me.role!=='serveur',pos=geoUrl(o.client);
+  const posH=pos?`<a class="btn sm ghost" href="${esc(pos)}" target="_blank" rel="noopener">📍 Position du client</a>`:'';
+  if(o.tl){const tl=o.tl,s=TLS[o.id],st=s&&TLST[s.statut];
+    return `<div class="row"><span>🛵 <b>${esc(tl.nom||tl.code)}</b> · course N° ${esc(tl.no)}${st?` <span class="tag ${st[1]}">${st[0]}</span>`:''}${s&&s.livreur?' · '+esc(s.livreur.nom):''}</span>${posH}</div>
+     ${cais?`<div class="row"><button class="btn sm ghost" onclick="tlSuivi('${o.id}',this)">Où en est la course ?</button>${o.client.tel?`<button class="btn sm alt" onclick="tlClient('${o.id}')">Lien au client</button>`:''}${S.set.livTel?`<button class="btn sm ghost" onclick="openWA('${esc(S.set.livTel)}','Bonjour, c\\'est ${esc(String(S.set.nom||'').replace(/'/g,' '))}. Pour la course N° ${esc(tl.no)} (commande n°${o.n})…')">WhatsApp société</button>`:''}</div>`:''}`}
+  const sf=o.livreurId?S.staff.find(x=>x.id===o.livreurId):null,esp=livAccesOn(sf);
+  const etat=o.livRetour?`<span class="tag t-du">↩️ Client absent · ${hm(o.livRetour)}</span>`:o.livFait?`<span class="tag t-paye">✅ Livrée à ${hm(o.livFait)}</span>`:o.livPart?`<span class="tag t-neutre">🛵 En route depuis ${hm(o.livPart)}</span>`:'';
+  return `<div class="row"><span>🛵 ${o.livreur?esc(o.livreur)+(o.livExterne?' (externe)':''):`<span class="muted">${t('Pas encore de livreur')}</span>`} ${etat}</span>${cais?`<button class="btn sm ghost" onclick="livModal('${o.id}')">${o.livreur?t('Changer'):t('Choisir')}</button>${o.livreurTel?`<button class="btn sm alt" onclick="waLivreur('${o.id}')">${t('WhatsApp livreur')}</button>`:''}`:''}${posH}</div>
+   ${cais&&!o.livreur&&S.set.livCode&&o.statut!=='servie'?`<button class="btn sm" style="background:#0E2A57" onclick="tlSend('${o.id}',this)">🛵 Envoyer à ${esc(tlNom())}</button>`:''}
+   ${esp&&!o.livFait?`<div class="muted" style="font-size:13px">${esc(o.livreur)} voit cette livraison dans son espace.</div>`:''}
+   ${chezLiv(o)?`<div class="row between" style="background:var(--ochre-soft);border-radius:10px;padding:8px 10px"><span>💰 <b>${F(o.livDu)}</b> chez ${esc(o.livPar||o.livreur||'le livreur')}</span>${cais?`<button class="btn sm ok" onclick="livVerse(['${o.id}'])">Reçu du livreur</button>`:''}</div>`:''}`}
+let versConf='';
+function vLivArgent(){if(!me||me.role==='serveur'||me.role==='cuisine')return '';const L=S.orders.filter(chezLiv);if(!L.length)return '';
+  const g={};L.forEach(o=>{const k=o.livreurId||o.livreur||'?';(g[k]=g[k]||{nom:o.livPar||o.livreur||'Livreur',L:[]}).L.push(o)});
+  return `<section class="card" style="border-color:var(--ochre)"><div class="lbl">💰 Argent chez les livreurs</div>
+   ${Object.values(g).map(x=>{const m=sum(x.L,o=>+o.livDu||0),ids=x.L.map(o=>o.id);return `<div class="line"><div class="g"><b>${esc(x.nom)}</b> · ${F(m)}<div class="muted">${x.L.map(o=>'n°'+o.n+(dk(o.date)!==dk(new Date())?' ('+fdate(o.date)+')':'')).join(', ')}</div></div><button class="btn sm ok" onclick="livVerse(${esc(JSON.stringify(ids))})">${versConf===ids.join(',')?'Sûr ? Touchez encore':'Tout reçu'}</button></div>`}).join('')}
+   <div class="muted" style="font-size:14px">Quand le livreur vous donne l'argent, touchez « Tout reçu » : la commande passe en payée (espèces) et son espace le montre.</div></section>`}
+function livVerse(ids){const L=ids.map(id=>S.orders.find(o=>o.id===id)).filter(o=>o&&chezLiv(o));if(!L.length)return;const key=ids.join(',');
+  const m=sum(L,o=>+o.livDu||0),nom=L[0].livPar||L[0].livreur||'livreur';
+  if(versConf!==key){versConf=key;render();toast(`Touchez encore pour confirmer : ${F(m)} reçu de ${nom}`);setTimeout(()=>{if(versConf===key){versConf='';softRender()}},6000);return}
+  versConf='';const now=new Date().toISOString();
+  L.forEach(o=>{const a=+o.livDu||0,T=tot(o);o.livVerse=now;o.encPar='Livreur '+nom+' → '+me.nom;
+    if(o.mode==='credit'&&o.paye){const c=o.clientId&&S.clients.find(x=>x.id===o.clientId);if(c)c.paiements.push({date:now,montant:a,mode:'especes'});return}
+    if((o.paiements&&o.paiements.length)||a!==T){o.paiements=o.paiements||[];o.paiements.push({date:now,montant:a,mode:'especes',par:'Livreur '+nom});if(sum(o.paiements)>=T){o.paye=true;o.mode='partage';o.payeLe=now}return}
+    o.paye=true;o.mode='especes';o.payeLe=now;o.recu=a});
+  save();render();toast(`${F(m)} reçu de ${nom} ✓`)}
+/* ---------- Société de livraison (Teranga Livraison) ---------- */
+const TL_SITE='https://seckappssn-maker.github.io/teranga-livraison/';let TLS={};
+const TLST={nouvelle:['En attente d\'un livreur','t-neutre'],prise:['Le livreur arrive','t-neutre'],recuperee:['En route','t-neutre'],livree:['Livrée ✅','t-paye'],annulee:['Annulée par la société','t-du']};
+function tlCodeOf(v){v=String(v||'').trim();const m=v.match(/[?&]c=([^&#\s]+)/);if(m)v=decodeURIComponent(m[1]);return v.toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40)}
+function tlNom(){return S.set.livNom||S.set.livCode||'la société'}
+const tel9=t=>{let d=String(t||'').replace(/\D/g,'');if(d.startsWith('00221'))d=d.slice(5);else if(d.startsWith('221')&&d.length===12)d=d.slice(3);return d.slice(-9)};
+function tlCard(){if(!isP())return '';const s=S.set,zs=s.livZones||[];
+  return `<section class="card"><div class="lbl">🛵 Société de livraison (facultatif)</div>
+   <div class="muted">Vous travaillez avec une société de livraison qui utilise Teranga Livraison ? Collez son lien ou son code. Sur chaque livraison vous aurez le bouton « Envoyer à la société » : elle reçoit la course tout de suite, son livreur encaisse pour vous.</div>
+   <label class="f">Lien ou code de la société<input id="g_tl" value="${esc(s.livCode||'')}" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Ex. : seck-livraison"></label>
+   ${zs.length>1?`<label class="f">Zone de départ<select id="g_tlz">${zs.map(z=>`<option ${z===(s.livZone||zs[0])?'selected':''}>${esc(z)}</option>`).join('')}</select></label>`:''}
+   ${s.livCode&&s.livNom?`<div class="muted">Reliée à <b>${esc(s.livNom)}</b>${s.livTel?' · '+esc(String(s.livTel).replace(/^(\d\d)(\d{3})(\d\d)(\d\d)$/,'$1 $2 $3 $4')):''}</div>`:''}
+   <button class="btn" onclick="tlSaveCode(val('g_tl'),val('g_tlz'))">${t('Enregistrer')}</button>
+   <div class="muted" style="font-size:14px">Laissez vide si vous avez seulement vos propres livreurs.</div></section>`}
+async function tlSaveCode(v,z){const c=tlCodeOf(v),s=S.set;
+  if(!c){s.livCode='';s.livNom='';s.livTel='';s.livZones=[];s.livZone='';save();render();toast('Pas de société de livraison');return}
+  if(c!==s.livCode){s.livNom='';s.livTel='';s.livZones=[]}s.livCode=c;s.livZone=String(z||'').slice(0,40);save();
+  if(DEMO||!SB){render();toast('Démo : la société n\'est pas vérifiée');return}
+  try{const r=await SB.rpc('liv_public',{p_code:c});if(r.error)throw r.error;const d=r.data;
+    if(!d||!d.ok){s.livNom='';save();render();toast('Société de livraison introuvable : vérifiez le lien');return}
+    s.livNom=d.nom||c;s.livTel=d.tel||'';s.livZones=d.zones||[];if(s.livZone&&s.livZones.indexOf(s.livZone)<0)s.livZone='';save();render();toast('Reliée à '+s.livNom+' 🛵')}
+  catch(e){render();toast(/fetch|network|Load failed/i.test(String(e&&e.message))?'Pas de connexion internet':String(e&&e.message||e))}}
+function tlMoney(o){const T=tot(o),du=o.paye&&o.mode!=='credit'?0:Math.max(0,T-sum(o.paiements||[])),fr=+o.frais||0;
+  return fr>0&&du>=fr?{du,prix:fr,paie:'dest',march:du-fr}:{du,prix:fr>0?fr:undefined,paie:'exp',march:du}}
+async function tlSend(id,b){const o=S.orders.find(x=>x.id===id);if(!o||o.tl)return;
+  if(DEMO||!SB){toast('Dans la démo, rien n\'est envoyé à la société');return}
+  if(tel9(S.set.tel).length!==9){toast('Mettez d\'abord le téléphone du restaurant dans Réglages');return}
+  if(tel9(o.client.tel).length!==9){toast('Il faut le téléphone du client (9 chiffres)');return}
+  const m=tlMoney(o),g=geoOf(o.client.geo).geo;
+  const p={src:'resto',type:'colis',zone:S.set.livZone||'',cli:{nom:S.set.nom,tel:tel9(S.set.tel)},de:S.set.adresse||S.set.nom,a:o.client.quartier||'',
+    dest:{nom:o.client.nom||'',tel:tel9(o.client.tel)},note:('Commande n°'+o.n+' · '+o.items.map(i=>i.q+' × '+i.nom).join(', ')+(o.note?' · '+o.note:'')).slice(0,300),
+    paie:m.paie,mode:'cash',march:m.march,vendeur:{nom:S.set.nom,tel:tel9(S.set.tel),ref:'n°'+o.n}};
+  if(m.prix!==undefined)p.prix=m.prix;if(g)p.apos={lat:g.lat,lng:g.lng};
+  if(b){b.disabled=true;b.textContent='Envoi…'}
+  try{const r=await SB.rpc('liv_demande',{p_code:S.set.livCode,p});if(r.error)throw r.error;const x=r.data||{};
+    o.tl={code:S.set.livCode,nom:tlNom(),id:x.id,no:x.no,tk:x.tk,dtk:x.dtk,cl:x.cl||'',t:Date.now()};delete o.livreurId;o.livreur='';o.livreurTel='';save();render();
+    toastAct('n°'+o.n+' envoyée à '+tlNom()+' 🛵',o.client.tel?'Lien au client':'OK',()=>{if(o.client.tel)tlClient(o.id)})}
+  catch(e){if(b){b.disabled=false;b.textContent='🛵 Envoyer à '+tlNom()}toast(/fetch|network|Load failed/i.test(String(e&&e.message))?'Pas de connexion : réessayez':String(e&&e.message||e))}}
+async function tlSuivi(id,b){const o=S.orders.find(x=>x.id===id);if(!o||!o.tl)return;if(b){b.disabled=true;b.textContent='…'}
+  try{const r=await SB.rpc('liv_suivi',{p_code:o.tl.code,p_id:o.tl.id,p_tk:o.tl.tk});if(r.error)throw r.error;const s=r.data;
+    if(!s||!s.ok){toast('Course introuvable chez la société')}else{TLS[id]=s;const st=TLST[s.statut];toast(st?st[0]:s.statut)}}
+  catch(e){toast(/fetch|network|Load failed/i.test(String(e&&e.message))?'Pas de connexion : réessayez':String(e&&e.message||e))}render()}
+function tlClient(id){const o=S.orders.find(x=>x.id===id);if(!o||!o.tl)return;const tl=o.tl,link=TL_SITE+'commande.html?c='+encodeURIComponent(tl.code)+'&d='+encodeURIComponent(tl.id)+'&k='+encodeURIComponent(tl.dtk);
+  openWA(o.client.tel,`Bonjour${o.client.nom?' '+o.client.nom:''}, votre commande n°${o.n} de ${S.set.nom} arrive avec ${tl.nom||'notre livreur'} 🛵\n${tl.cl?'Votre code de livraison : '+tl.cl+' (donnez-le au livreur seulement quand vous avez la commande).\n':''}Envoyez votre position ici pour qu'il vous trouve vite :\n${link}`)}
 
 /* ---------- Écran cuisine ---------- */
 function ageMin(o){return Math.floor((Date.now()-new Date(o.cuisineDate||o.date).getTime())/60000)}
@@ -1034,13 +1148,13 @@ function vCommandes(){
   const ST={cuisine:['t-cuisine','En cuisine'],prete:['t-prete','Prête'],servie:['t-servie','Servie']};
   return `<div class="chips">${isP()&&has('cuisine')?`<button class="chip" onclick="go('cuisine')">${t('Écran cuisine')}</button>`:''}${ecrOk()?`<button class="chip" onclick="ecrSet(true)">📺 ${t('Écran clients')}</button>`:''}<button class="chip ${cmdF==='encours'?'on':''}" onclick="cmdF='encours';render()">${t('En cours')}</button><button class="chip ${cmdF==='tout'?'on':''}" onclick="cmdF='tout';render()">${t('Toutes aujourd\'hui')} (${all.length})</button></div>
   <div class="oleg">${Object.entries(EC).map(([k,[c,l]])=>`<button style="--oc:${c}" class="${cmdF===k||cmdF==='tout'||(cmdF==='encours'&&k!=='fini')?'':'dim'}" onclick="cmdF=cmdF==='${k}'?'tout':'${k}';render()">${l} · ${nb[k]}</button>`).join('')}</div>
-  ${vWeb()}
+  ${vLivArgent()}${vWeb()}
   <div class="olist">${L.map(o=>{const s=ST[o.statut];const e=etat(o);const isNew=Date.now()-new Date(o.date).getTime()<120000&&e==='cuisine';const nx=o.statut==='cuisine'?['prete','Prête']:o.statut==='prete'?['servie',o.type==='livraison'?'Livrée':'Servie']:null;
    return `<article class="order s-${e} ${isNew?'new':''}">
     <div class="row between"><span class="row" style="gap:10px"><span class="num">n°${o.n}</span><span class="ostat">${EC[e][1]}</span>${isNew?'<span class="tag t-du">NOUVEAU</span>':''}${o.web?'<span class="tag" style="background:#7B3FA0;color:#fff">🌐 En ligne</span>':''}</span><span class="muted">${new Date(o.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
     <div class="row"><span class="tag t-neutre">${t(TY[o.type])}${o.table?' · '+t('Table')+' '+esc(o.table):''}</span>${o.statut==='servie'?`<span class="tag t-servie">${t(o.type==='livraison'?'Livrée':'Servie')}</span>`:''}${o.paye?`<span class="tag t-paye">${o.mode==='credit'?t('Dette'):o.mode==='abonne'?t('Abonnement'):t('Payée')+' · '+mName(o.mode)}</span>`:`<span class="tag t-du">${o.paiements&&o.paiements.length?t('Déjà payé')+' '+F(sum(o.paiements))+' · '+t('Reste')+' '+F(tot(o)-sum(o.paiements)):t('À payer')}</span>`}</div>
     ${o.client&&o.client.nom?`<div><b>${esc(o.client.nom)}</b> ${esc(o.client.tel||'')} ${o.client.quartier?'· '+esc(o.client.quartier):''}</div>`:''}
-    ${o.type==='livraison'?`<div class="row"><span>🛵 ${o.livreur?esc(o.livreur)+(o.livExterne?' (externe)':''):`<span class="muted">${t('Pas encore de livreur')}</span>`}</span>${me.role!=='serveur'?`<button class="btn sm ghost" onclick="livModal('${o.id}')">${o.livreur?t('Changer'):t('Choisir')}</button>${o.livreurTel?`<button class="btn sm alt" onclick="waLivreur('${o.id}')">${t('WhatsApp livreur')}</button>`:''}`:''}</div>`:''}
+    ${o.type==='livraison'?livRow(o):''}
     ${o.par&&isP()?`<div class="muted" style="font-size:13px">Prise par ${esc(o.par)}${o.encPar?' · encaissée par '+esc(o.encPar):''}</div>`:''}
     <div class="muted">${o.items.map(i=>i.q+' × '+esc(i.nom)).join(', ')}${o.frais?' + '+t('Livraison').toLowerCase():''}</div>
     ${o.remise?`<div style="color:var(--ok);font-weight:700">${t('Remise')} −${F(o.remise)}</div>`:''}
@@ -1336,24 +1450,33 @@ function staffModal(id){const s=id?S.staff.find(x=>x.id===id):{nom:'',role:'cais
   const roles=['caissier','serveur','cuisine','livreur'].filter(roleOk);
   modal(`<h2>${id?'Modifier':'Nouvelle personne'}</h2>
   <label class="f">Nom<input id="s_n" value="${esc(s.nom)}"></label>
-  <div class="row"><label class="f">Accès<select id="s_r">${roles.map(r=>`<option value="${r}" ${s.role===r?'selected':''}>${ROLES[r]}</option>`).join('')}<option value="livreur" ${s.role==='livreur'?'selected':''}>Livreur (sans code, reçoit sur WhatsApp)</option><option value="autre" ${s.role==='autre'?'selected':''}>Sans accès (gardien, aide…)</option></select></label>
-  <label class="f">Code (4 chiffres)<input id="s_p" inputmode="numeric" maxlength="4" value="${esc(s.pin)}"></label></div>
+  <div class="row"><label class="f">Accès<select id="s_r" onchange="staffRole(this.value)">${roles.map(r=>`<option value="${r}" ${s.role===r?'selected':''}>${ROLES[r]}</option>`).join('')}<option value="livreur" ${s.role==='livreur'?'selected':''}>Livreur à moto</option><option value="autre" ${s.role==='autre'?'selected':''}>Sans accès (gardien, aide…)</option></select></label>
+  <label class="f" id="s_plbl" ${s.role==='livreur'||s.role==='autre'?'hidden':''}>Code (4 chiffres)<input id="s_p" inputmode="numeric" maxlength="4" value="${esc(s.pin)}"></label></div>
+  <div id="s_livbox" ${s.role==='livreur'?'':'hidden'}>${has('livreurs')?`
+   <label class="chk" style="margin:6px 0"><input type="checkbox" id="s_la" style="width:auto" ${s.lacces||!id?'checked':''}> Espace livreur sur son téléphone</label>
+   <label class="f">Son code d'accès (4 chiffres)<input id="s_lc" inputmode="numeric" maxlength="4" value="${esc(s.lcode||livCodeNew())}"></label>
+   <div class="muted" style="font-size:14px">Il entre avec <b>son numéro</b> et ce code. Il voit seulement ses livraisons : adresse et position du client, montant à encaisser. Il touche « Livré » et la caisse le voit tout de suite.</div>`:`<div class="muted" style="font-size:14px">Le livreur reçoit la livraison sur WhatsApp. Avec la formule Pro ou Premium, il a aussi son espace sur son téléphone.</div>`}</div>
   <div class="row"><label class="f">${t('Téléphone')}<input id="s_t" inputmode="tel" value="${esc(s.tel||'')}"></label><label class="f">${t('Salaire')} mensuel (F)<input id="s_s" inputmode="numeric" value="${esc(s.salaire)}"></label></div>
   <div class="muted" style="font-size:14px">Rôles possibles avec la formule ${FORMULES[S.set.formule].nom} : ${roles.map(r=>ROLES[r]).join(', ')}.</div>
   <button class="btn full" onclick="saveStaff('${id||''}')">${t('Enregistrer')}</button>
   ${id?`<button class="btn ghost full" style="color:var(--bad)" onclick="delStaff('${id}')">${t('Supprimer')} (son code ne marchera plus)</button>`:''}
   <button class="btn ghost full" onclick="closeM()">${t('Annuler')}</button>`)}
+function staffRole(r){const a=document.getElementById('s_plbl'),b=document.getElementById('s_livbox');if(a)a.hidden=r==='livreur'||r==='autre';if(b)b.hidden=r!=='livreur'}
 function saveStaff(id){
   const nom=val('s_n').trim(),role=val('s_r'),pin=val('s_p').trim();
   if(!nom)return toast('Écrivez le nom');
   const noCode=role==='autre'||role==='livreur';
+  const la=role==='livreur'&&has('livreurs')&&!!(document.getElementById('s_la')||{}).checked,lc=String(val('s_lc')).replace(/\D/g,'');
+  if(la){if(String(val('s_t')).replace(/\D/g,'').slice(-9).length<9)return toast('Espace livreur : écrivez son numéro de téléphone (9 chiffres)');
+    if(lc.length!==4)return toast('Le code d\'accès du livreur a 4 chiffres')}
   if(!noCode){
     if(!/^\d{4}$/.test(pin))return toast('Le code doit avoir 4 chiffres');
     if(pin===S.set.pinPatron||S.staff.some(x=>x.pin===pin&&x.id!==id))return toast('Ce code est déjà pris, choisissez-en un autre');
   }
-  const d={nom,role,pin:noCode?'':pin,tel:val('s_t'),salaire:+val('s_s')||0};
-  if(id)Object.assign(S.staff.find(x=>x.id===id),d);else S.staff.push({id:uid(),...d,mvts:[]});
-  save();closeM();render();toast('Enregistré')}
+  const d={nom,role,pin:noCode?'':pin,tel:val('s_t'),salaire:+val('s_s')||0,lacces:la,lcode:la?lc:''};
+  const old=id?S.staff.find(x=>x.id===id):null,neuf=la&&(!old||!old.lacces||old.lcode!==lc||String(old.tel||'')!==String(d.tel||''));
+  let sid=id;if(old)Object.assign(old,d);else{sid=uid();S.staff.push({id:sid,...d,mvts:[]})}
+  save();closeM();render();if(neuf)livAccesModal(sid);else toast('Enregistré')}
 function delStaff(id){if(delConf!==id){delConf=id;toast('Touchez encore pour supprimer');return}S.staff=S.staff.filter(x=>x.id!==id);delConf=null;save();closeM();render()}
 
 /* Équipe et codes */
@@ -1362,13 +1485,14 @@ function vEquipe(){
   <div class="muted">Un seul lien pour tout le monde. Chaque personne entre son code et voit seulement son espace. Touchez « Sortir » pour passer le téléphone à quelqu'un d'autre.</div>
   <section class="card">
    <div class="line"><div class="g"><b>Patron (vous)</b><div class="muted">Voit tout : argent, réglages, équipe</div></div><button class="btn sm alt" onclick="pinPatronModal()">Changer mon code</button></div>
-   ${S.staff.map(s=>`<div class="line"><div class="g"><b>${esc(s.nom)}</b><div class="muted">${ROLES[s.role]||s.role}${s.pin?' · code '+esc(s.pin):''}${s.role!=='autre'&&s.role!=='livreur'&&!roleOk(s.role)?' · <span style="color:var(--bad)">pas dans la formule</span>':''}</div></div><button class="btn sm ghost" onclick="staffModal('${s.id}')">Modifier</button></div>`).join('')}
+   ${S.staff.map(s=>`<div class="line"><div class="g"><b>${esc(s.nom)}</b><div class="muted">${ROLES[s.role]||s.role}${s.pin?' · code '+esc(s.pin):''}${s.role!=='autre'&&s.role!=='livreur'&&!roleOk(s.role)?' · <span style="color:var(--bad)">pas dans la formule</span>':''}${livAccesOn(s)?' · espace livreur ✓ code '+esc(s.lcode):''}</div></div>${livAccesOn(s)?`<button class="btn sm alt" onclick="livAccesModal('${s.id}')">Envoyer l'accès</button>`:''}<button class="btn sm ghost" onclick="staffModal('${s.id}')">Modifier</button></div>`).join('')}
   </section>
   <section class="card"><div class="lbl">Ce que voit chaque rôle</div>
    <div><b>Caissier</b> : caisse, commandes, encaisser, menu (sans changer les prix).</div>
    ${roleOk('cuisine')?'<div><b>Cuisine</b> : seulement l\'écran des commandes à préparer, avec « Prête ».</div>':''}
    ${roleOk('serveur')?'<div><b>Serveur</b> : prend les commandes aux tables et les envoie en cuisine. Ne voit pas l\'argent.</div>':''}
-   <div><b>Livreurs</b> (du resto ou externes) : pas de code. La caisse leur envoie la livraison sur WhatsApp : adresse, téléphone du client, montant à encaisser.</div>
+   ${has('livreurs')?`<div><b>Livreurs du resto</b> : leur propre espace sur leur téléphone (numéro + code d'accès). Ils voient leurs livraisons, la position du client, le montant à encaisser, et touchent « Livré ». La caisse voit qui a l'argent.</div>
+   <div><b>Livreurs externes</b> : la caisse leur envoie la livraison sur WhatsApp.</div>${livLink()?`<div class="lbl" style="margin-top:8px">Lien de l'espace livreur</div><div class="linkbox">${esc(livLink())}</div>`:''}`:`<div><b>Livreurs</b> (du resto ou externes) : la caisse leur envoie la livraison sur WhatsApp : adresse, position et téléphone du client, montant à encaisser. Avec la formule Pro ou Premium, chaque livreur a aussi son espace sur son téléphone.</div>`}
   </section>`}
 function pinPatronModal(first){modal(`<h2>Mon code patron</h2>${first?'<div>Vous êtes entré avec <b>0000</b>. Choisissez votre code secret : les employés ne doivent pas le connaître.</div>':''}<label class="f">Nouveau code (4 chiffres)<input id="pp" inputmode="numeric" maxlength="4" type="password"></label>
   <button class="btn full" onclick="const p=val('pp').trim();if(!/^\\d{4}$/.test(p))return toast('4 chiffres');if(p==='0000')return toast('Choisissez un autre code que 0000');if(S.staff.some(x=>x.pin===p))return toast('Code déjà pris par un employé');S.set.pinPatron=p;save();closeM();toast('Code changé')">${t('Enregistrer')}</button><button class="btn ghost full" onclick="closeM()">${first?'Plus tard':t('Annuler')}</button>`)}
@@ -1395,6 +1519,7 @@ function vReglages(){const s=S.set;
    <div class="row"><label class="f">Numéro Wave<input id="g_w" inputmode="tel" value="${esc(s.wave)}"></label><label class="f">Numéro Orange Money<input id="g_o" inputmode="tel" value="${esc(s.om)}"></label></div>
    <label class="f">${t('Frais de livraison')} par défaut (F)<input id="g_f" inputmode="numeric" value="${esc(s.fraisLiv)}"></label>
    <button class="btn" onclick="Object.assign(S.set,{nom:val('g_nom'),tel:val('g_tel'),adresse:val('g_adr'),wave:val('g_w'),om:val('g_o'),fraisLiv:+val('g_f')||0});save();render();toast('Enregistré')">${t('Enregistrer')}</button></section>
+  ${tlCard()}
   ${DEMO?'':abCard()}
   ${DEMO?`<section class="card"><div class="lbl">Formule (démo)</div>
    ${Object.entries(FORMULES).map(([k,f])=>`<button class="mode ${S.set.formule===k?'on':''}" style="text-align:left" onclick="S.set.formule='${k}';save();render()"><div class="row between"><span>${f.nom}</span><span>${f.prix}</span></div></button>`).join('')}

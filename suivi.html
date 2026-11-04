@@ -92,7 +92,7 @@ async function lire(){
   catch(e){if(!C)C={ok:false,raison:'reseau'};else C.horsLigne=true;return}
   if(C)C.horsLigne=false}
 
-function etat(c){if(c.statut==='prete')return'prete';if(c.statut==='servie')return'servie';if(c.statut==='annule')return'annule';return'cuisine'}
+function etat(c){if(c.type==='livraison'&&c.livPart&&!c.livFait&&c.statut!=='servie'&&c.statut!=='annule')return'route';if(c.statut==='prete')return'prete';if(c.statut==='servie')return'servie';if(c.statut==='annule')return'annule';return'cuisine'}
 
 function draw(){const A=$('app');if(!C){return}
   const son=!sonOk&&!(C.ok&&['servie','annule'].includes(etat(C)))?`<button class="son" onclick="unlock()">🔔 Touchez ici pour entendre quand c'est prêt</button>`:'';
@@ -107,10 +107,11 @@ function draw(){const A=$('app');if(!C){return}
   const e=etat(C),table=C.type==='place'&&C.table;
   const msg={cuisine:`<div class="etat prep">🔥 En préparation<small>Restez ici : la page vous prévient quand c'est prêt.</small></div>`,
     prete:`<div class="etat ok">✅ Votre commande est prête&nbsp;!<small>${C.type==='livraison'?'Le livreur part bientôt avec votre commande.':table?'Le serveur vous l\'apporte à la table '+esc(C.table)+'.':'Venez la récupérer au comptoir.'}</small></div>`,
+    route:`<div class="etat ok">🛵 En route${C.livreur?' avec '+esc(C.livreur):''}&nbsp;!<small>Votre commande arrive. Gardez votre téléphone près de vous.</small></div>`,
     servie:`<div class="etat fini">${C.type==='livraison'?'🛵 Commande livrée.':'Bon appétit&nbsp;! 😋'}<small>${C.type==='livraison'?'Bon appétit et merci&nbsp;!':'Merci et à bientôt.'}</small></div>`,
     annule:`<div class="etat bad">Commande annulée<small>Demandez à la caisse.</small></div>`}[e];
-  const st=(k,l,ic)=>{const ord=['recue','cuisine','prete'],ix=ord.indexOf(k),cur=e==='servie'||e==='prete'?3:ord.indexOf(e==='annule'?'recue':e);return`<div class="step ${ix<cur?'done':ix===cur?'on':''}"><i>${ix<cur?'✓':ic}</i>${l}</div>`};
-  A.innerHTML=`${son}<div class="card ${e==='prete'?'pret':''}${e==='prete'&&prev!=='prete'&&prev?' flash':''}">
+  const st=(k,l,ic)=>{const ord=['recue','cuisine','prete'],ix=ord.indexOf(k),cur=e==='servie'||e==='prete'||e==='route'?3:ord.indexOf(e==='annule'?'recue':e);return`<div class="step ${ix<cur?'done':ix===cur?'on':''}"><i>${ix<cur?'✓':ic}</i>${l}</div>`};
+  A.innerHTML=`${son}<div class="card ${e==='prete'||e==='route'?'pret':''}${(e==='prete'||e==='route')&&prev!==e&&prev?' flash':''}">
     <div class="lbl">Votre numéro</div><div class="num">${esc(C.n)}</div>
     <div class="sub">${C.type==='emporter'?'À emporter':C.type==='place'?'Sur place'+(table?' · Table '+esc(C.table):''):C.type==='livraison'?'Livraison':''}</div>
     ${e!=='annule'?`<div class="steps">${st('recue','Reçue','1')}${st('cuisine','En préparation','2')}${st('prete','Prête','3')}</div>`:''}
@@ -118,13 +119,14 @@ function draw(){const A=$('app');if(!C){return}
     ${C.horsLigne?`<div class="note" style="color:var(--bad)">Pas de connexion : la page réessaie toute seule.</div>`:''}
     ${e==='cuisine'?`<div class="note">Gardez cette page ouverte. Vous pouvez aussi regarder l'écran du restaurant.</div>`:''}
     ${DEMO?`<div class="demo">Exemple : la commande devient « prête » après 20 secondes</div>`:''}`;
-  document.title=(e==='prete'?'✅ Prête · ':'')+'n°'+C.n+(C.resto?' – '+C.resto:'');
+  document.title=(e==='prete'?'✅ Prête · ':e==='route'?'🛵 En route · ':'')+'n°'+C.n+(C.resto?' – '+C.resto:'');
 }
 
 async function tour(){clearTimeout(timer);await lire();
   if(C&&C.ok){const e=etat(C);
     if(e==='prete'&&prev&&prev!=='prete'){ding();try{navigator.vibrate&&navigator.vibrate([300,150,300,150,600])}catch(x){}
       setTimeout(()=>parler('Votre commande numéro '+C.n+' est prête.'),900)}
+    else if(e==='route'&&prev&&prev!=='route'){ding();try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(x){}setTimeout(()=>parler('Votre commande est en route.'),900)}
     draw();prev=e;if(e==='servie'||e==='annule')return}
   else draw();
   if(C&&!C.ok&&!['attente','reseau'].includes(C.raison))return;

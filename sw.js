@@ -1,5 +1,5 @@
 // Teranga Resto - ouverture sans internet
-const CACHE = 'teranga-resto-v1';
+const CACHE = 'teranga-resto-v2';
 const BASE = [
   './',
   './index.html',
@@ -77,8 +77,14 @@ self.addEventListener('notificationclick', e => {
   e.notification.close();
   e.waitUntil((async () => {
     const scope = self.registration.scope;
+    const want = new URL((e.notification.data && e.notification.data.url) || './', scope).href;
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const w of wins) if (w.url.startsWith(scope) && !/(menu|shop|reserver)\.html/.test(w.url)) { await w.focus(); return; }
+    // Avis pour un livreur : on rouvre son espace livreur
+    if (/livreur\.html/.test(want)) {
+      for (const w of wins) if (/livreur\.html/.test(w.url)) { await w.focus(); return; }
+      await self.clients.openWindow(want); return;
+    }
+    for (const w of wins) if (w.url.startsWith(scope) && !/(menu|shop|reserver|livreur|suivi)\.html/.test(w.url)) { await w.focus(); return; }
     await self.clients.openWindow(scope);
   })());
 });
