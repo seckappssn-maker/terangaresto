@@ -1457,7 +1457,7 @@ function staffModal(id){const s=id?S.staff.find(x=>x.id===id):{nom:'',role:'cais
    <label class="f">Son code d'accès (4 chiffres)<input id="s_lc" inputmode="numeric" maxlength="4" value="${esc(s.lcode||livCodeNew())}"></label>
    <div class="muted" style="font-size:14px">Il entre avec <b>son numéro</b> et ce code. Il voit seulement ses livraisons : adresse et position du client, montant à encaisser. Il touche « Livré » et la caisse le voit tout de suite.</div>`:`<div class="muted" style="font-size:14px">Le livreur reçoit la livraison sur WhatsApp. Avec la formule Pro ou Premium, il a aussi son espace sur son téléphone.</div>`}</div>
   <div class="row"><label class="f">${t('Téléphone')}<input id="s_t" inputmode="tel" value="${esc(s.tel||'')}"></label><label class="f">${t('Salaire')} mensuel (F)<input id="s_s" inputmode="numeric" value="${esc(s.salaire)}"></label></div>
-  <div class="muted" style="font-size:14px">Rôles possibles avec la formule ${FORMULES[S.set.formule].nom} : ${roles.map(r=>ROLES[r]).join(', ')}.</div>
+  <div class="muted" style="font-size:14px">Rôles possibles avec la formule ${FORMULES[S.set.formule].nom} : ${[...roles.map(r=>ROLES[r]),has('livreurs')?'Livreur (avec son espace sur le téléphone)':'Livreur (reçoit les livraisons sur WhatsApp)'].join(', ')}.</div>
   <button class="btn full" onclick="saveStaff('${id||''}')">${t('Enregistrer')}</button>
   ${id?`<button class="btn ghost full" style="color:var(--bad)" onclick="delStaff('${id}')">${t('Supprimer')} (son code ne marchera plus)</button>`:''}
   <button class="btn ghost full" onclick="closeM()">${t('Annuler')}</button>`)}
