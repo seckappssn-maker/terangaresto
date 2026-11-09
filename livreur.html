@@ -122,7 +122,7 @@ function homeIcon(nom){try{const base=location.href.split(/[?#]/)[0].replace(/li
 
 /* ---------- Données de la démo ---------- */
 function demoVue(){const n=Date.now(),iso=m=>new Date(n-m*60000).toISOString();
-  return {ok:true,resto:{nom:'Restaurant Teranga (exemple)',tel:'77 879 00 06'},me:{id:'d',nom:'Ibou'},orders:[
+  return {ok:true,resto:{nom:'Restaurant Teranga (exemple)',tel:'77 000 00 00'},me:{id:'d',nom:'Ibou'},orders:[
     {id:'a',n:12,date:iso(25),statut:'prete',client:{nom:'Awa Ndiaye',tel:'770000002',quartier:'Liberté 6, près de la pharmacie',geo:{lat:14.7167,lng:-17.4677}},items:[{q:2,nom:'Thiéboudienne'},{q:2,nom:'Bissap'}],note:'Sans piment',frais:500,total:6500,du:6500,paye:false},
     {id:'b',n:14,date:iso(12),statut:'cuisine',client:{nom:'Moussa Fall',tel:'770000006',quartier:'Sacré-Cœur 3, villa 12'},items:[{q:1,nom:'Yassa poulet'}],note:'',frais:500,total:3500,du:0,paye:true,mode:'wave'},
     {id:'c',n:9,date:iso(80),statut:'servie',client:{nom:'Bineta Sow',tel:'770000007',quartier:'Point E'},items:[{q:3,nom:'Mafé'}],frais:1000,total:7000,du:7000,paye:false,livFait:iso(40),livDu:7000}]}}
@@ -215,6 +215,20 @@ if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceW
 if(DEMO){load(false)}
 else if(ACC){V=lsGet(KEY+'-v',null);render();load(false).then(()=>{poll();pushResync()})}
 else render();
+</script>
+<script>
+/* Démo : les boutons Appeler / WhatsApp vers les numéros d'exemple n'ouvrent rien (le contact Seck Apps marche toujours) */
+(function(){
+  function on(){try{return !!(DEMO)}catch(e){return false}}
+  function num(h){h=String(h||'');var m=h.match(/^(?:tel|sms):\s*([+\d\s.-]+)/i)||h.match(/wa\.me\/\+?(\d+)/i)||h.match(/[?&]phone=\+?(\d+)/i);return m?m[1].replace(/\D/g,''):null}
+  function bad(h){var n=num(h);return !!n&&!/^(221)?778790006$/.test(n)}
+  function msg(h){var tel=/^(tel|sms):/i.test(String(h));var d=document.getElementById('demoMsg');if(!d){d=document.createElement('div');d.id='demoMsg';
+      d.style.cssText='position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9999;max-width:88vw;background:#13222C;color:#fff;padding:12px 16px;border-radius:14px;font:600 15px/1.35 system-ui,sans-serif;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.3)';document.body.appendChild(d)}
+    d.textContent='Exemple : dans la vraie app, ce bouton '+(tel?'appelle le numéro.':'ouvre WhatsApp.');clearTimeout(d._t);d.style.display='block';d._t=setTimeout(function(){d.style.display='none'},2600)}
+  document.addEventListener('click',function(e){if(!on())return;var a=e.target&&e.target.closest&&e.target.closest('a[href]');if(a&&bad(a.getAttribute('href'))){e.preventDefault();e.stopImmediatePropagation();msg(a.getAttribute('href'))}},true);
+  var ac=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(on()&&bad(this.getAttribute('href'))){msg(this.getAttribute('href'));return}return ac.apply(this,arguments)};
+  var wo=window.open;window.open=function(u){if(on()&&bad(u)){msg(u);return null}return wo.apply(window,arguments)};
+})();
 </script>
 </body>
 </html>

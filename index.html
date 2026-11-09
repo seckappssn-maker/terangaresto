@@ -392,7 +392,7 @@ function seed(){
     {id:uid(),n:4,date:new Date(now.getTime()-12*60000).toISOString(),type:'place',table:'5',client:{},frais:0,items:[it(3,2),it(18,2)],note:'',statut:'cuisine',paye:false}];
   return {
     exemple:true,
-    set:{nom:'Restaurant Teranga',tel:'77 879 00 06',adresse:'Dakar',wave:'77 879 00 06',om:'77 879 00 06',fraisLiv:500,lang:'fr',formule:'premium',pinPatron:'0000'},
+    set:{nom:'Restaurant Teranga',tel:'77 000 00 00',adresse:'Dakar',wave:'77 000 00 00',om:'77 000 00 00',fraisLiv:500,lang:'fr',formule:'premium',pinPatron:'0000'},
     livExt:[{nom:'Modou moto (exemple)',tel:'770000007'}],
     plats,orders,
     depenses:[
@@ -1757,5 +1757,19 @@ async function pushResync(){if(pushSynced||pushDemo()||!pushFlag()||!pushOk()||N
 
 </script>
 
+<script>
+/* Démo : les boutons Appeler / WhatsApp vers les numéros d'exemple n'ouvrent rien (le contact Seck Apps marche toujours) */
+(function(){
+  function on(){try{return !!(typeof DEMO!=='undefined'&&DEMO)}catch(e){return false}}
+  function num(h){h=String(h||'');var m=h.match(/^(?:tel|sms):\s*([+\d\s.-]+)/i)||h.match(/wa\.me\/\+?(\d+)/i)||h.match(/[?&]phone=\+?(\d+)/i);return m?m[1].replace(/\D/g,''):null}
+  function bad(h){var n=num(h);return !!n&&!/^(221)?778790006$/.test(n)}
+  function msg(h){var tel=/^(tel|sms):/i.test(String(h));var d=document.getElementById('demoMsg');if(!d){d=document.createElement('div');d.id='demoMsg';
+      d.style.cssText='position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9999;max-width:88vw;background:#13222C;color:#fff;padding:12px 16px;border-radius:14px;font:600 15px/1.35 system-ui,sans-serif;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.3)';document.body.appendChild(d)}
+    d.textContent='Exemple : dans la vraie app, ce bouton '+(tel?'appelle le numéro.':'ouvre WhatsApp.');clearTimeout(d._t);d.style.display='block';d._t=setTimeout(function(){d.style.display='none'},2600)}
+  document.addEventListener('click',function(e){if(!on())return;var a=e.target&&e.target.closest&&e.target.closest('a[href]');if(a&&bad(a.getAttribute('href'))){e.preventDefault();e.stopImmediatePropagation();msg(a.getAttribute('href'))}},true);
+  var ac=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(on()&&bad(this.getAttribute('href'))){msg(this.getAttribute('href'));return}return ac.apply(this,arguments)};
+  var wo=window.open;window.open=function(u){if(on()&&bad(u)){msg(u);return null}return wo.apply(window,arguments)};
+})();
+</script>
 </body>
 </html>

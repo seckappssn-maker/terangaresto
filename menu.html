@@ -183,7 +183,7 @@ function ill(bg,a,b,c){const s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox=
 function cup(bg,drink){const s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="${bg}"/><path d="M150 70h100l-12 175h-76z" fill="#ffffff" opacity=".9"/><path d="M156 105h88l-9 135h-70z" fill="${drink}"/></svg>`;return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s)}
 function demoData(){const wd=new Date().getDay();
   return{ok:true,demo:true,nom:'Chez Awa (exemple)',logo:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#fff"/><circle cx="60" cy="60" r="46" fill="#0E4D6E"/><text x="60" y="74" text-anchor="middle" font-family="Georgia,serif" font-size="40" font-weight="700" fill="#fff">CA</text></svg>'),
-   photos:[ill('#0E4D6E','#D9822B','#8C3B1B','#3F7D3A'),ill('#1E7299','#F4F1E6','#E3B23C','#6B8E23')],adresse:'Liberté 6, Dakar',texte:'Cuisine sénégalaise faite maison. Thiéb tous les jours à midi, grillades le soir.',whatsapp:'77 879 00 06',horaires:'Tous les jours, 11h – 23h',
+   photos:[ill('#0E4D6E','#D9822B','#8C3B1B','#3F7D3A'),ill('#1E7299','#F4F1E6','#E3B23C','#6B8E23')],adresse:'Liberté 6, Dakar',texte:'Cuisine sénégalaise faite maison. Thiéb tous les jours à midi, grillades le soir.',whatsapp:'77 000 00 00',horaires:'Tous les jours, 11h – 23h',
    services:{livraison:true,emporter:true,place:true},zones:[{nom:'Liberté / Sicap',prix:500},{nom:'Parcelles / Grand Yoff',prix:1000},{nom:'Plateau / Almadies',prix:1500}],
    plats:[
     {id:'d1',nom:'Thiéboudienne',prix:2000,cat:'Plats',dispo:true,desc:'Riz au poisson frais, légumes et sauce tomate. Pour 1 personne.',jours:[wd],photos:[ill('#E7C9A0','#D9822B','#8C3B1B','#3F7D3A'),ill('#D7E3C4','#D9822B','#B8562B','#F2C14E'),ill('#F3D9B1','#C96E2A','#3F7D3A','#8C3B1B')]},
@@ -429,5 +429,19 @@ boot();
 if(LAST&&LAST.id&&enCours())suivre();
 </script>
 
+<script>
+/* Démo : les boutons Appeler / WhatsApp vers les numéros d'exemple n'ouvrent rien (le contact Seck Apps marche toujours) */
+(function(){
+  function on(){try{return !!(DEMO)}catch(e){return false}}
+  function num(h){h=String(h||'');var m=h.match(/^(?:tel|sms):\s*([+\d\s.-]+)/i)||h.match(/wa\.me\/\+?(\d+)/i)||h.match(/[?&]phone=\+?(\d+)/i);return m?m[1].replace(/\D/g,''):null}
+  function bad(h){var n=num(h);return !!n&&!/^(221)?778790006$/.test(n)}
+  function msg(h){var tel=/^(tel|sms):/i.test(String(h));var d=document.getElementById('demoMsg');if(!d){d=document.createElement('div');d.id='demoMsg';
+      d.style.cssText='position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9999;max-width:88vw;background:#13222C;color:#fff;padding:12px 16px;border-radius:14px;font:600 15px/1.35 system-ui,sans-serif;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.3)';document.body.appendChild(d)}
+    d.textContent='Exemple : dans la vraie app, ce bouton '+(tel?'appelle le numéro.':'ouvre WhatsApp.');clearTimeout(d._t);d.style.display='block';d._t=setTimeout(function(){d.style.display='none'},2600)}
+  document.addEventListener('click',function(e){if(!on())return;var a=e.target&&e.target.closest&&e.target.closest('a[href]');if(a&&bad(a.getAttribute('href'))){e.preventDefault();e.stopImmediatePropagation();msg(a.getAttribute('href'))}},true);
+  var ac=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){if(on()&&bad(this.getAttribute('href'))){msg(this.getAttribute('href'));return}return ac.apply(this,arguments)};
+  var wo=window.open;window.open=function(u){if(on()&&bad(u)){msg(u);return null}return wo.apply(window,arguments)};
+})();
+</script>
 </body>
 </html>
