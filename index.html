@@ -72,6 +72,30 @@ main{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;flex-directio
 .qrpick{border:1.5px dashed var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;min-width:0}
 .qrpick img{width:100%;max-height:170px;object-fit:contain;background:#fff;border-radius:10px}
 .qrpick label{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:12px 4px;width:100%}
+/* Ticket du client (écran, image, PDF) : papier blanc, logo rond, couleur du restaurant */
+.ticwrap{background:var(--bg);border-radius:14px;padding:16px 8px 26px}
+.tic{--tc:#155E83;position:relative;background:#fff;color:#1b1b1b;max-width:360px;margin:0 auto;border-radius:14px 14px 0 0;box-shadow:0 8px 26px rgba(19,34,44,.14);font-family:var(--f-body);padding-bottom:10px}
+.tic::after{content:"";position:absolute;left:0;right:0;bottom:-10px;height:10px;background:radial-gradient(circle at 8px 0,#fff 8px,transparent 8.5px) center 0/16px 10px repeat-x}
+.tic .ticph{display:block;width:100%;height:118px;object-fit:cover;border-radius:14px 14px 0 0}
+.tic .ticband{height:72px;border-radius:14px 14px 0 0;background-color:var(--tc);background-image:radial-gradient(rgba(255,255,255,.16) 2px,transparent 2.5px);background-size:14px 14px}
+.tic .ticlogo{display:block;width:80px;height:80px;border-radius:50%;object-fit:cover;background:#fff;margin:-40px auto 8px;box-shadow:0 0 0 4px #fff,0 4px 12px rgba(0,0,0,.16);position:relative}
+.tic .ticini{display:grid;place-items:center;background:var(--tc);color:#fff;font:800 30px var(--f-display)}
+.tic .ticn{font:800 22px/1.15 var(--f-display);text-align:center;padding:0 16px;color:#141414;overflow-wrap:anywhere}
+.tic .tics{text-align:center;color:#6b6b6b;font-size:13px;padding:2px 16px 0}
+.tic .ticb{padding:2px 20px 4px;font-size:14px}
+.tic hr{border:0;border-top:1.5px dashed #cfcfcf;margin:10px 0}
+.tic .ln{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:2px 0}
+.tic .ln>span{min-width:0;overflow-wrap:anywhere}.tic .ln b{white-space:nowrap}
+.tic .ln small{display:block;color:#8a8a8a;font-size:12px}
+.tic .ln.sm{font-size:13px;color:#555}
+.tic .tot{font:800 22px var(--f-display);color:var(--tc);padding-top:4px}
+.tic .ticpay{display:table;margin:8px auto 4px;padding:5px 14px;border-radius:99px;font-weight:800;font-size:13px}
+.tic .ticpay.ok{background:#E1F2E7;color:#2E7D4F}.tic .ticpay.du{background:#FBE3E1;color:#B3261E}
+.tic .thx{text-align:center;font:800 16px/1.3 var(--f-display);color:var(--tc);margin-top:12px;padding:0 8px}
+.ticimg{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.15)}
+.ticcols{display:flex;gap:12px;flex-wrap:wrap}
+.ticcol{width:40px;height:40px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1.5px var(--line);cursor:pointer;padding:0}
+.ticcol.on{box-shadow:0 0 0 3px var(--ink)}
 .btn{border:0;border-radius:12px;padding:13px 16px;font-weight:700;font-size:16px;cursor:pointer;background:var(--bissap);color:var(--on-accent);min-height:48px}
 .btn.alt{background:var(--bissap-soft);color:var(--bissap)}
 .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
@@ -302,6 +326,7 @@ body.tv .pret .sm{font-size:clamp(18px,1.6vw,40px)}
   #print .c{text-align:center} #print .r{display:flex;justify-content:space-between;gap:4px}
   #print hr{border:0;border-top:1px dashed #000;margin:4px 0}
   #print .xl{font-size:15px;font-weight:700}
+  #print .plogo{display:block;width:24mm;height:24mm;object-fit:contain;margin:0 auto 1.5mm;filter:grayscale(1) contrast(1.25)}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 .tgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -1196,13 +1221,15 @@ let confirmCancel=null;
 function cancelOrder(id){if(confirmCancel!==id){confirmCancel=id;toast('Touchez encore pour confirmer l\'annulation');return}const o=S.orders.find(x=>x.id===id);o.annule=true;confirmCancel=null;save();closeM();render();toast('Commande annulée')}
 
 /* ---------- Tickets ---------- */
-function printHTML(h){document.getElementById('print').innerHTML=h;try{window.print()}catch(e){toast(t('Impression impossible sur cet appareil'))}}
+function printHTML(h){const el=document.getElementById('print');el.innerHTML=h;const go=()=>{try{window.print()}catch(e){toast(t('Impression impossible sur cet appareil'))}};
+  const im=[...el.querySelectorAll('img')].filter(i=>!i.complete);if(!im.length)return go();
+  let n=im.length,done=false;const fin=()=>{if(!done){done=true;go()}};im.forEach(i=>{i.onload=i.onerror=()=>{if(--n<=0)fin()}});setTimeout(fin,1500)}
 /* Sur iPhone, ouvert depuis l'icône de l'écran d'accueil, l'impression ne marche pas : on le dit */
 const iosApp=()=>{try{return navigator.standalone===true}catch(e){return false}};
 function printNote(){return iosApp()?`<div class="muted" style="font-size:13px;text-align:center;margin-top:-4px">${t('Sur iPhone, l\'impression marche seulement dans Safari, pas depuis l\'icône de l\'écran d\'accueil. Sinon : WhatsApp ou Copier.')}</div>`:''}
 function ticketBody(o){
-  const T=tot(o);
-  return `<div class="c xl">${esc(S.set.nom)}</div><div class="c">${esc(S.set.adresse)}<br>Tél ${esc(S.set.tel)}</div><hr>
+  const T=tot(o),lg=ticLogo();
+  return `${lg?`<img class="plogo" src="${esc(lg)}" alt="">`:''}<div class="c xl">${esc(S.set.nom)}</div>${S.set.tSous?`<div class="c">${esc(S.set.tSous)}</div>`:''}<div class="c">${esc(S.set.adresse)}<br>Tél ${esc(S.set.tel)}</div><hr>
   <div class="r"><span>Ticket n°${o.n}</span><span>${new Date(o.date).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span></div>
   <div>${{place:'Sur place'+(o.table?' · Table '+esc(o.table):''),emporter:'À emporter',livraison:'Livraison'}[o.type]}</div>
   ${o.client&&o.client.nom?`<div>Client : ${esc(o.client.nom)} ${esc(o.client.tel||'')}</div>`:''}${o.client&&o.client.quartier?`<div>Quartier : ${esc(o.client.quartier)}</div>`:''}<hr>
@@ -1212,17 +1239,19 @@ function ticketBody(o){
   <div class="r xl"><span>TOTAL</span><span>${F(T)}</span></div>
   ${o.paye?`<div class="r"><span>Payé</span><span>${MODES[o.mode]}</span></div>${o.mode==='partage'&&o.paiements?o.paiements.map((p,i)=>`<div class="r"><span>· Pers. ${i+1} ${MODES[p.mode]}</span><span>${F(p.montant)}</span></div>`).join(''):''}${o.mode==='mixte'&&o.parts?['especes','wave','om'].filter(m=>+o.parts[m]).map(m=>`<div class="r"><span>· ${MODES[m]}</span><span>${F(o.parts[m])}</span></div>`).join(''):''}${o.mode==='especes'&&o.recu?`<div class="r"><span>Reçu</span><span>${F(o.recu)}</span></div><div class="r"><span>Rendu</span><span>${F(o.recu-T)}</span></div>`:''}`:`<div>À payer</div>`}
   ${S.set.wave?`<hr><div class="c">Wave : ${esc(S.set.wave)}</div>`:''}${S.set.om?`<div class="c">Orange Money : ${esc(S.set.om)}</div>`:''}
-  <hr><div class="c">Jërëjëf ! Merci et à bientôt</div>`;
+  <hr><div class="c">${esc(ticMsg())}</div>`;
 }
 function ticketOrder(id,after){const o=S.orders.find(x=>x.id===id);
-  modal(`<h2>${t('Ticket')} n°${o.n}</h2><div class="card" style="font-family:'Courier New',monospace;font-size:13px">${ticketBody(o).replace(/class="r"/g,'class="row between"').replace(/<hr>/g,'<hr style="border:0;border-top:1px dashed var(--line);width:100%">')}</div>
-   <button class="btn full" onclick="printHTML(ticketBody(S.orders.find(x=>x.id==='${id}')))">Imprimer (58 mm)</button>${printNote()}
-   ${o.client&&o.client.tel?`<button class="btn alt full" onclick="waOrder('${id}')">Envoyer sur WhatsApp</button>`:''}
+  modal(`<h2>${t('Ticket')} n°${o.n}</h2><div class="ticwrap">${ticHTML(o)}</div>
+   <div class="lbl">${t('Envoyer au client')}</div>
+   <div class="grid2"><button class="btn" onclick="ticMake('${id}','img')">🖼️ ${t('En image')}</button><button class="btn" onclick="ticMake('${id}','pdf')">📄 PDF</button></div>
+   <button class="btn alt full" onclick="printHTML(ticketBody(S.orders.find(x=>x.id==='${id}')))">🖨️ Imprimer (58 mm)</button>${printNote()}
+   ${o.client&&o.client.tel?`<button class="btn alt full" onclick="waOrder('${id}')">${t('WhatsApp (en texte)')}</button>`:''}
    <button class="btn alt full" onclick="copyTxt(ticketTxt(S.orders.find(x=>x.id==='${id}')))">Copier le ticket</button>
    <button class="btn ghost full" onclick="closeM();render()">${t('Fermer')}</button>`)}
 function ticketCuisine(id){const o0=S.orders.find(x=>x.id===id);const o={...o0,items:kItems(o0),note:o0.cuisineItems?o0.cuisineNote:o0.note};
   printHTML(`<div class="c xl">CUISINE n°${o.n}</div><div class="c">${{place:'SUR PLACE'+(o.table?' T'+esc(o.table):''),emporter:'À EMPORTER',livraison:'LIVRAISON'}[o.type]} · ${new Date(o.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</div><hr>${o.items.map(i=>`<div class="xl">${i.q} x ${esc(i.nom)}</div>`).join('')}${o.note?`<hr><div class="xl">NOTE : ${esc(o.note)}</div>`:''}`)}
-function ticketTxt(o){return `*${S.set.nom}*\nCommande n°${o.n}\n${o.items.map(i=>`${i.q} x ${i.nom} : ${F(i.prix*i.q)}`).join('\n')}${o.frais?`\nLivraison : ${F(o.frais)}`:''}${o.remise?`\nRemise : -${F(o.remise)}`:''}\n*TOTAL : ${F(tot(o))}*\n${o.paye?(o.mode==='credit'?'Mis en dette':'Payé ('+MODES[o.mode]+')'):'À payer'}${S.set.wave?`\nWave : ${S.set.wave}`:''}${S.set.om?`\nOrange Money : ${S.set.om}`:''}\nJërëjëf !`}
+function ticketTxt(o){return `*${S.set.nom}*\nCommande n°${o.n}\n${o.items.map(i=>`${i.q} x ${i.nom} : ${F(i.prix*i.q)}`).join('\n')}${o.frais?`\nLivraison : ${F(o.frais)}`:''}${o.remise?`\nRemise : -${F(o.remise)}`:''}\n*TOTAL : ${F(tot(o))}*\n${o.paye?(o.mode==='credit'?'Mis en dette':'Payé ('+MODES[o.mode]+')'):'À payer'}${S.set.wave?`\nWave : ${S.set.wave}`:''}${S.set.om?`\nOrange Money : ${S.set.om}`:''}\n${ticMsg()}`}
 const waNum=t=>{let n=String(t||'').replace(/\D/g,'');if(n.length===9)n='221'+n;return n};
 function waOrder(id){const o=S.orders.find(x=>x.id===id);openWA(o.client.tel,ticketTxt(o))}
 function openWA(tel,txt){const a=document.createElement('a');a.href='https://wa.me/'+waNum(tel)+'?text='+encodeURIComponent(txt);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
@@ -1534,6 +1563,7 @@ function vReglages(){const s=S.set;
    <div class="muted" style="font-size:13px">${t('Dans Wave ou Max it, ouvrez « Mon code QR », faites une capture d’écran et ajoutez-la ici. Le QR s’affiche quand vous touchez Wave ou OM à la caisse, et chez le livreur.')}</div>
    <label class="f">${t('Frais de livraison')} par défaut (F)<input id="g_f" inputmode="numeric" value="${esc(s.fraisLiv)}"></label>
    <button class="btn" onclick="Object.assign(S.set,{nom:val('g_nom'),tel:val('g_tel'),adresse:val('g_adr'),wave:val('g_w'),om:val('g_o'),fraisLiv:+val('g_f')||0});save();render();toast('Enregistré')">${t('Enregistrer')}</button></section>
+  ${ticCard()}
   ${tlCard()}
   ${DEMO?'':abCard()}
   ${DEMO?`<section class="card"><div class="lbl">Formule (démo)</div>
@@ -1638,18 +1668,19 @@ function qrPick(k,label){const u=S.set[k];
   return `<div class="qrpick" id="qp_${k}">${qrBusy===k?`<span style="font-size:26px">⏳</span><span class="muted">${t('Envoi du QR…')}</span>`
    :qrOk(u)?`<img src="${esc(u)}" alt="QR ${esc(label)}"><b>${esc(label)} ✓</b><div class="row" style="gap:6px;justify-content:center;flex-wrap:wrap"><label class="btn sm ghost" style="padding:8px 10px">${t('Changer')}${inp}</label><button class="btn sm ghost" onclick="qrDel('${k}')">${t('Retirer')}</button></div>`
    :`<label><span style="font-size:28px;line-height:1">＋</span><b>QR ${esc(label)}</b><span class="muted" style="font-size:13px">${t('Photo ou capture d’écran')}</span>${inp}</label>`}</div>`}
-function qrRefresh(){[['qrWave','Wave'],['qrOm','Orange Money']].forEach(([k,l])=>{const e=document.getElementById('qp_'+k);if(e)e.outerHTML=qrPick(k,l)})}
+function qrRefresh(){[['qrWave','Wave'],['qrOm','Orange Money']].forEach(([k,l])=>{const e=document.getElementById('qp_'+k);if(e)e.outerHTML=qrPick(k,l)});
+  ['tLogo','tPhoto'].forEach(k=>{const e=document.getElementById('qp_'+k);if(e)e.outerHTML=ticPick(k)});ticPrevUpd()}
 async function qrPickFile(inp,k){const f=inp.files&&inp.files[0];inp.value='';if(!f||qrBusy)return;
   qrBusy=k;qrRefresh();const old=S.set[k];
   try{
-    if(DEMO){const r=await qrShrink(f,520);S.set[k]=r.url}
-    else{if(!SB||!USER)throw new Error('network');const r=await qrShrink(f,900);if(!r.blob)throw new Error('blob');
+    if(DEMO){const r=await qrShrink(f,k==='tPhoto'?800:520);S.set[k]=r.url}
+    else{if(!SB||!USER)throw new Error('network');const r=await qrShrink(f,k==='tLogo'?600:900);if(!r.blob)throw new Error('blob');
       const path=USER.id+'/qr-'+uid()+'.jpg';const up=await SB.storage.from(PH_BUCKET).upload(path,r.blob,{contentType:'image/jpeg',cacheControl:'31536000',upsert:false});
       if(up.error)throw up.error;S.set[k]=SB.storage.from(PH_BUCKET).getPublicUrl(path).data.publicUrl}
-    save();if(old&&old!==S.set[k])storageRemove([old]);toast(t('QR enregistré ✓'))
-  }catch(e){const m=String(e&&e.message||e);toast(/img|blob/.test(m)?'Image illisible, essayez une autre':/fetch|network|Failed/i.test(m)?'Pas de connexion : le QR n’est pas envoyé':/row-level|policy|Unauthorized|403/i.test(m)?'QR refusé : abonnement terminé ?':'QR non envoyé : '+m)}
+    save();if(old&&old!==S.set[k])storageRemove([old]);toast(/^qr/.test(k)?t('QR enregistré ✓'):t('Image enregistrée ✓'))
+  }catch(e){const m=String(e&&e.message||e);toast(/img|blob/.test(m)?'Image illisible, essayez une autre':/fetch|network|Failed/i.test(m)?'Pas de connexion : l’image n’est pas envoyée':/row-level|policy|Unauthorized|403/i.test(m)?'Image refusée : abonnement terminé ?':'Image non envoyée : '+m)}
   qrBusy='';qrRefresh()}
-function qrDel(k){const old=S.set[k];S.set[k]='';save();if(old)storageRemove([old]);qrRefresh();toast(t('QR retiré'))}
+function qrDel(k){const old=S.set[k];S.set[k]='';save();if(old)storageRemove([old]);qrRefresh();toast(/^qr/.test(k)?t('QR retiré'):t('Image retirée'))}
 /* Y a-t-il quelque chose à montrer au client pour ce moyen ? (QR, numéro, ou la démo) */
 function qrDispo(m){return DEMO||qrOk(S.set[m==='om'?'qrOm':'qrWave'])||!!String(S.set[m==='om'?'om':'wave']||'').trim()}
 function payQrBox(mode,T,amtId){const W=mode!=='om',u=S.set[W?'qrWave':'qrOm'],num=String(S.set[W?'wave':'om']||'').trim(),nm=W?'Wave':'Orange Money';
@@ -1672,6 +1703,159 @@ function livPayOk(id){const o=S.orders.find(x=>x.id===id);if(!o||!livPayW(o))ret
   lpConf='';const now=new Date().toISOString(),a=+o.livPayM||tot(o);o.livPayOk=now;
   if(o.paye&&o.mode==='credit'){const c=o.clientId&&S.clients.find(x=>x.id===o.clientId);if(c)c.paiements.push({date:now,montant:a,mode:o.livPay});o.encPar=me.nom;save();render();toast('n°'+o.n+' · '+F(a)+' '+t('reçu'));return}
   o.encPar=me.nom;finishPay(o,o.livPay)}
+/* ---------- Ticket du client : logo, nom, couleur, message — à l'écran, en image, en PDF et sur le papier ---------- */
+const TIC_COLS=['#155E83','#B3261E','#2E7D4F','#B4610F','#6B3FA0','#13222C'];
+let ticDraft=null,ticBusy=false,ticFile=null,ticUrl='',DEMO_ART=null;
+const ticCol=()=>TIC_COLS.includes(S.set.tCol)?S.set.tCol:TIC_COLS[0];
+const ticMsg=()=>String((ticDraft?ticDraft.msg:S.set.tMsg)||'').trim()||'Jërëjëf ! Merci et à bientôt';
+const ticIni=n=>(String(n||'').trim().split(/\s+/).filter(w=>w&&!/^(le|la|les|l'|chez|de|du|des|restaurant|resto)$/i.test(w)).slice(0,2).map(w=>w[0]).join('')||'R').toUpperCase();
+/* Démo : un logo et une photo dessinés ici (aucune vraie photo) */
+function demoArt(){if(DEMO_ART)return DEMO_ART;DEMO_ART={logo:'',photo:''};try{
+  const a=document.createElement('canvas');a.width=a.height=240;let x=a.getContext('2d');
+  let g=x.createRadialGradient(90,80,20,120,120,140);g.addColorStop(0,'#E3912F');g.addColorStop(1,'#9A4A10');x.fillStyle=g;x.fillRect(0,0,240,240);
+  x.strokeStyle='rgba(255,255,255,.28)';x.lineWidth=3;x.beginPath();x.arc(120,120,104,0,7);x.stroke();
+  x.fillStyle='#fff';x.beginPath();x.moveTo(50,116);x.lineTo(190,116);x.quadraticCurveTo(186,176,120,178);x.quadraticCurveTo(54,176,50,116);x.fill();x.fillRect(98,176,44,9);
+  x.strokeStyle='#fff';x.lineWidth=7;x.lineCap='round';[92,120,148].forEach(cx=>{x.beginPath();x.moveTo(cx,102);x.bezierCurveTo(cx-13,88,cx+13,76,cx,58);x.stroke()});
+  x.fillStyle='#fff';x.font='800 25px "Bricolage Grotesque",system-ui,sans-serif';x.textAlign='center';x.fillText('TERANGA',120,215);
+  DEMO_ART.logo=a.toDataURL('image/png');
+  const b=document.createElement('canvas');b.width=900;b.height=360;x=b.getContext('2d');
+  g=x.createLinearGradient(0,0,900,360);g.addColorStop(0,'#5A2A0C');g.addColorStop(.55,'#B8621B');g.addColorStop(1,'#E9A23B');x.fillStyle=g;x.fillRect(0,0,900,360);
+  for(let i=0;i<9;i++)for(let j=0;j<4;j++){const cx=50+i*110+(j%2)*55,cy=36+j*100;[44,29,14].forEach((r,k)=>{x.beginPath();x.arc(cx,cy,r,0,7);x.strokeStyle=k===1?'rgba(255,214,140,.32)':'rgba(255,255,255,.16)';x.lineWidth=7;x.stroke()})}
+  DEMO_ART.photo=b.toDataURL('image/jpeg',.85)}catch(e){}return DEMO_ART}
+/* Logo du ticket : celui choisi ici, sinon celui de « Ma page client » */
+function ticLogo(){const u=S.set.tLogo;if(okImg(u))return u;if(u==null){if(S.page&&okImg(S.page.logo))return S.page.logo;if(DEMO)return demoArt().logo}return ''}
+function ticPhoto(){const u=S.set.tPhoto;if(okImg(u))return u;if(u==null&&DEMO)return demoArt().photo;return ''}
+function ticData(o){const T=tot(o),P=o.paiements||[],deja=sum(P),extra=[];
+  if(o.paye){if(o.mode==='partage')P.forEach((p,i)=>extra.push(['Pers. '+(i+1)+' · '+(MODES[p.mode]||p.mode),F(p.montant)]));
+    if(o.mode==='mixte'&&o.parts)['especes','wave','om'].filter(m=>+o.parts[m]).forEach(m=>extra.push([MODES[m],F(o.parts[m])]));
+    if(o.mode==='especes'&&o.recu){extra.push(['Reçu',F(o.recu)]);extra.push(['Rendu',F(Math.max(0,o.recu-T))])}}
+  else if(deja>0){extra.push(['Déjà payé',F(deja)]);extra.push(['Reste',F(Math.max(0,T-deja))])}
+  const cl=o.client||{};
+  return {nom:String(S.set.nom||'').trim()||'Mon restaurant',sous:String((ticDraft?ticDraft.sous:S.set.tSous)||'').trim(),
+    adr:[S.set.adresse,S.set.tel?'Tél '+S.set.tel:''].filter(Boolean).join(' · '),n:o.n,
+    date:new Date(o.date).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+    typ:({place:'Sur place'+(o.table?' · Table '+o.table:''),emporter:'À emporter',livraison:'Livraison'})[o.type]||'',
+    client:cl.nom?cl.nom+(cl.tel?' · '+cl.tel:''):'',quartier:cl.quartier||'',
+    items:(o.items||[]).map(i=>({l:i.q+' × '+i.nom,p:F(i.prix*i.q),u:i.q>1?'@ '+F(i.prix):''})),
+    frais:o.frais?F(o.frais):'',sous_tot:o.remise?F(sousTot(o)):'',remise:o.remise?'-'+F(o.remise):'',total:F(T),
+    pay:o.paye?(o.mode==='credit'?['Mis en dette','du']:['Payé · '+(MODES[o.mode]||o.mode),'ok']):['À payer','du'],extra,
+    mm:[S.set.wave?'Wave '+S.set.wave:'',S.set.om?'Orange Money '+S.set.om:''].filter(Boolean),msg:ticMsg()}}
+function ticHTML(o){const D=ticData(o),lg=ticLogo(),ph=ticPhoto();
+  return `<div class="tic" style="--tc:${ticCol()}">${ph?`<img class="ticph" src="${esc(ph)}" alt="">`:'<div class="ticband"></div>'}
+   ${lg?`<img class="ticlogo" src="${esc(lg)}" alt="Logo">`:`<div class="ticlogo ticini">${esc(ticIni(D.nom))}</div>`}
+   <div class="ticn">${esc(D.nom)}</div>${D.sous?`<div class="tics">${esc(D.sous)}</div>`:''}${D.adr?`<div class="tics">${esc(D.adr)}</div>`:''}
+   <div class="ticb"><hr>
+    <div class="ln"><span>Ticket <b>n°${esc(D.n)}</b></span><span>${esc(D.date)}</span></div>
+    <div class="ln"><span>${esc(D.typ)}</span></div>
+    ${D.client?`<div class="ln"><span>Client : ${esc(D.client)}</span></div>`:''}${D.quartier?`<div class="ln"><span>Quartier : ${esc(D.quartier)}</span></div>`:''}<hr>
+    ${D.items.map(i=>`<div class="ln"><span>${esc(i.l)}${i.u?`<small>${esc(i.u)}</small>`:''}</span><b>${esc(i.p)}</b></div>`).join('')}
+    ${D.frais?`<div class="ln"><span>Livraison</span><b>${esc(D.frais)}</b></div>`:''}<hr>
+    ${D.remise?`<div class="ln sm"><span>Sous-total</span><span>${esc(D.sous_tot)}</span></div><div class="ln sm"><span>Remise</span><span>${esc(D.remise)}</span></div>`:''}
+    <div class="ln tot"><span>TOTAL</span><span>${esc(D.total)}</span></div>
+    <div class="ticpay ${D.pay[1]}">${esc(D.pay[0])}</div>
+    ${D.extra.map(([a,b])=>`<div class="ln sm"><span>${esc(a)}</span><span>${esc(b)}</span></div>`).join('')}
+    ${D.mm.length?`<hr><div class="tics" style="padding:0">${D.mm.map(m=>`<span style="white-space:nowrap">${esc(m)}</span>`).join(' · ')}</div>`:''}
+    <div class="thx">${esc(D.msg)}</div></div></div>`}
+function ticSample(){const L=(S.plats||[]).filter(p=>+p.prix>0).slice(0,2);
+  const items=L.length===2?L.map((p,i)=>({nom:p.nom,prix:+p.prix,q:i?2:1})):[{nom:'Thiéboudienne',prix:2500,q:1},{nom:'Bissap',prix:500,q:2}];
+  return {id:'_ex',n:12,date:new Date().toISOString(),type:'place',table:'4',client:{},items,frais:0,paye:true,mode:'wave'}}
+/* Dessin du ticket pour l'image et le PDF */
+const ticImg=u=>new Promise(r=>{if(!u)return r(null);const im=new Image(),d=/^data:/.test(u);if(!d)im.crossOrigin='anonymous';let ok=false;
+  im.onload=()=>{ok=true;r(im)};im.onerror=()=>r(null);setTimeout(()=>{if(!ok)r(null)},7000);im.src=d?u:u+(u.includes('?')?'&':'?')+'tic=1'});
+async function ticFonts(){try{await Promise.race([Promise.all(['800 40px "Bricolage Grotesque"','700 22px Figtree','500 22px Figtree','600 20px Figtree'].map(f=>document.fonts.load(f))),new Promise(r=>setTimeout(r,2500))])}catch(e){}}
+function ticDraw(x,D,col,lg,ph,H){const W=640,P=20,M=P+34,R=W-P-34,PW=W-2*P,dry=!H,top=ph?200:100,LR=62;let y=P;
+  const FF=(w,z,d)=>{x.font=w+' '+z+'px '+(d?'"Bricolage Grotesque",':'Figtree,')+'system-ui,-apple-system,"Segoe UI",sans-serif'};
+  const wrap=(t,mw)=>{const out=[];let cur='';String(t||'').split(/\s+/).forEach(w=>{if(!w)return;const tt=cur?cur+' '+w:w;if(cur&&x.measureText(tt).width>mw){out.push(cur);cur=w}else cur=tt});out.push(cur);return out};
+  const center=(t,w,z,d,c,lh)=>{if(!t)return;FF(w,z,d);wrap(t,PW-60).forEach(l=>{if(!dry){x.fillStyle=c;x.textAlign='center';x.fillText(l,W/2,y+z*.9)}y+=lh})};
+  const row=(a,b,o)=>{o=o||{};const z=o.s||22;FF(o.bw||'700',z,o.d);const bw=b?x.measureText(b).width:0;
+    if(!dry&&b){x.fillStyle=o.bc||o.c||'#1b1b1b';x.textAlign='right';x.fillText(b,R,y+z*.9)}
+    FF(o.w||'500',z,o.d);wrap(a,R-M-bw-(b?18:0)).forEach(l=>{if(!dry){x.fillStyle=o.c||'#1b1b1b';x.textAlign='left';x.fillText(l,M,y+z*.9)}y+=o.lh||Math.round(z*1.4)})};
+  const dash=()=>{y+=8;if(!dry){x.save();x.strokeStyle='#cfcfcf';x.lineWidth=2;x.setLineDash([9,7]);x.beginPath();x.moveTo(M,y);x.lineTo(R,y);x.stroke();x.restore()}y+=18};
+  const rr=(X,Y,w,h,r)=>{x.beginPath();x.moveTo(X+r,Y);x.lineTo(X+w-r,Y);x.quadraticCurveTo(X+w,Y,X+w,Y+r);x.lineTo(X+w,Y+h);x.lineTo(X,Y+h);x.lineTo(X,Y+r);x.quadraticCurveTo(X,Y,X+r,Y);x.closePath()};
+  const cover=(im,X,Y,w,h)=>{const k=Math.max(w/im.width,h/im.height),sw=w/k,sh=h/k;x.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,X,Y,w,h)};
+  if(!dry){const PB=H-P-12;x.fillStyle='#E9EDF0';x.fillRect(0,0,W,H);
+    x.save();x.shadowColor='rgba(19,34,44,.16)';x.shadowBlur=22;x.shadowOffsetY=6;x.fillStyle='#fff';rr(P,P,PW,PB-P,18);x.fill();x.restore();
+    x.fillStyle='#fff';const nS=Math.round(PW/16),st=PW/nS;for(let i=0;i<nS;i++){x.beginPath();x.arc(P+st*(i+.5),PB,st/2,0,Math.PI);x.fill()}
+    x.save();rr(P,P,PW,top,18);x.clip();if(ph)cover(ph,P,P,PW,top);else{x.fillStyle=col;x.fillRect(P,P,PW,top);x.fillStyle='rgba(255,255,255,.16)';
+      for(let i=P+7;i<W-P;i+=14)for(let j=P+7;j<P+top;j+=14){x.beginPath();x.arc(i,j,2,0,7);x.fill()}}x.restore();
+    const cy=P+top;x.save();x.shadowColor='rgba(0,0,0,.18)';x.shadowBlur=14;x.shadowOffsetY=4;x.fillStyle='#fff';x.beginPath();x.arc(W/2,cy,LR+6,0,7);x.fill();x.restore();
+    x.save();x.beginPath();x.arc(W/2,cy,LR,0,7);x.clip();if(lg){x.fillStyle='#fff';x.fillRect(W/2-LR,cy-LR,LR*2,LR*2);cover(lg,W/2-LR,cy-LR,LR*2,LR*2)}
+      else{x.fillStyle=col;x.fillRect(W/2-LR,cy-LR,LR*2,LR*2);FF('800',46,true);x.fillStyle='#fff';x.textAlign='center';x.fillText(ticIni(D.nom),W/2,cy+16)}x.restore()}
+  y=P+top+LR+22;
+  center(D.nom,'800',40,true,'#141414',48);if(D.sous)center(D.sous,'600',21,false,'#666',28);if(D.adr)center(D.adr,'500',19,false,'#777',26);
+  dash();row('Ticket n°'+D.n,D.date,{s:20,w:'700',bw:'500',bc:'#555'});row(D.typ,'',{s:20,c:'#444'});
+  if(D.client)row('Client : '+D.client,'',{s:20,c:'#444'});if(D.quartier)row('Quartier : '+D.quartier,'',{s:20,c:'#444'});
+  dash();D.items.forEach(i=>{row(i.l,i.p,{s:23});if(i.u){y-=6;row(i.u,'',{s:17,c:'#8a8a8a',lh:24})}});
+  if(D.frais)row('Livraison',D.frais,{s:22});dash();
+  if(D.remise){row('Sous-total',D.sous_tot,{s:19,c:'#555',bw:'500'});row('Remise',D.remise,{s:19,c:'#555',bw:'500'})}
+  row('TOTAL',D.total,{s:36,d:true,w:'800',bw:'800',c:col,lh:50});
+  FF('800',20);const pw=x.measureText(D.pay[0]).width+40,okp=D.pay[1]==='ok';y+=4;
+  if(!dry){const pl=W/2-pw/2,pr=W/2+pw/2;x.fillStyle=okp?'#E1F2E7':'#FBE3E1';x.beginPath();x.arc(pl+20,y+20,20,Math.PI/2,Math.PI*1.5);x.lineTo(pr-20,y);x.arc(pr-20,y+20,20,-Math.PI/2,Math.PI/2);x.closePath();x.fill();
+    x.fillStyle=okp?'#2E7D4F':'#B3261E';x.textAlign='center';x.fillText(D.pay[0],W/2,y+27)}
+  y+=52;D.extra.forEach(([a,b])=>row(a,b,{s:19,c:'#555',bw:'500'}));
+  if(D.mm.length){dash();FF('600',19);const j=D.mm.join(' · ');if(x.measureText(j).width<=PW-60)center(j,'600',19,false,'#555',26);else D.mm.forEach(m=>center(m,'600',19,false,'#555',26))}
+  y+=10;center(D.msg,'800',25,true,col,32);y+=22;return y}
+async function ticCanvas(o){const D=ticData(o),col=ticCol();const [lg,ph]=await Promise.all([ticImg(ticLogo()),ticImg(ticPhoto()),ticFonts()]);
+  const m=document.createElement('canvas').getContext('2d'),H=Math.ceil(ticDraw(m,D,col,lg,ph,0))+12+20,W=640,k=Math.max(1,Math.min(2,Math.sqrt(15e6/(W*H))));
+  const cv=document.createElement('canvas');cv.width=Math.round(W*k);cv.height=Math.round(H*k);const x=cv.getContext('2d');x.scale(k,k);
+  try{ticDraw(x,D,col,lg,ph,H)}catch(e){ticDraw(x,D,col,null,null,H)}
+  try{cv.toDataURL('image/jpeg',.1)}catch(e){x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,cv.width,cv.height);x.scale(k,k);ticDraw(x,D,col,null,null,H)}
+  return cv}
+/* PDF fait ici, sans librairie : une page à la taille du ticket (80 mm) avec l'image dedans */
+function jpgPdf(jpg,pw,ph,mm){const W=mm*72/25.4,H=W*ph/pw,en=new TextEncoder(),parts=[],offs=[];let len=0;
+  const add=v=>{const b=typeof v==='string'?en.encode(v):v;parts.push(b);len+=b.length};
+  const obj=(n,f)=>{offs[n]=len;add(n+' 0 obj\n');f();add('\nendobj\n')};
+  const cs='q '+W.toFixed(2)+' 0 0 '+H.toFixed(2)+' 0 0 cm /Im0 Do Q';
+  add('%PDF-1.4\n');
+  obj(1,()=>add('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2,()=>add('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'));
+  obj(3,()=>add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W.toFixed(2)+' '+H.toFixed(2)+'] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>'));
+  obj(4,()=>{add('<< /Type /XObject /Subtype /Image /Width '+pw+' /Height '+ph+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpg.length+' >>\nstream\n');add(jpg);add('\nendstream')});
+  obj(5,()=>add('<< /Length '+cs.length+' >>\nstream\n'+cs+'\nendstream'));
+  const xr=len;add('xref\n0 6\n0000000000 65535 f \n'+[1,2,3,4,5].map(n=>String(offs[n]).padStart(10,'0')+' 00000 n \n').join(''));
+  add('trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+xr+'\n%%EOF');return new Blob(parts,{type:'application/pdf'})}
+async function ticMake(id,kind){if(ticBusy)return;const o=id==='_ex'?ticSample():S.orders.find(x=>x.id===id);if(!o)return;
+  ticBusy=true;toast(t('Préparation du ticket…'));
+  try{const cv=await ticCanvas(o);const jpg=await new Promise((r,j)=>cv.toBlob(b=>b?r(b):j(new Error('image')),'image/jpeg',.92));
+    const slug=String(S.set.nom||'ticket').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'').toLowerCase().slice(0,30)||'ticket';
+    let out=jpg,name=slug+'-ticket-'+o.n+'.jpg';
+    if(kind==='pdf'){out=jpgPdf(new Uint8Array(await new Response(jpg).arrayBuffer()),cv.width,cv.height,80);name=slug+'-ticket-'+o.n+'.pdf'}
+    if(ticUrl)try{URL.revokeObjectURL(ticUrl)}catch(e){}ticUrl=URL.createObjectURL(out);ticFile=null;try{ticFile=new File([out],name,{type:out.type})}catch(e){}
+    ticShow(o,kind,name,out.size)}
+  catch(e){toast(t('Ticket non créé')+' : '+String(e&&e.message||e))}ticBusy=false}
+function ticShow(o,kind,name,size){const back=o.id!=='_ex'&&S.orders.some(x=>x.id===o.id)?`ticketOrder('${o.id}')`:'closeM()';
+  modal(`<h2>${kind==='pdf'?t('Ticket en PDF'):t('Ticket en image')} · n°${o.n}</h2>
+   ${kind==='pdf'?`<div class="card" style="align-items:center;text-align:center"><div style="font-size:44px;line-height:1">📄</div><b style="word-break:break-all">${esc(name)}</b><div class="muted">${Math.max(1,Math.round(size/1024))} Ko · ${t('format ticket 80 mm')}</div></div>`:`<img class="ticimg" src="${ticUrl}" alt="Ticket n°${o.n}">`}
+   <button class="btn ok full" style="min-height:58px;font-size:18px" onclick="ticSend()">📤 ${t('Envoyer')} (WhatsApp…)</button>
+   <a class="btn alt full" style="text-decoration:none;text-align:center" href="${ticUrl}" download="${esc(name)}" target="_blank" rel="noopener">${kind==='pdf'?t('Ouvrir le PDF'):t('Enregistrer l’image')}</a>
+   ${kind==='pdf'?`<div class="muted" style="font-size:13px;text-align:center">${t('Depuis le PDF ouvert, vous pouvez aussi l’imprimer.')}</div>`:`<div class="muted" style="font-size:13px;text-align:center">${t('Vous pouvez aussi appuyer longtemps sur l’image.')}</div>`}
+   <button class="btn ghost full" onclick="${back}">← ${t('Retour')}</button>`)}
+function ticSend(){try{if(ticFile&&navigator.canShare&&navigator.canShare({files:[ticFile]})){navigator.share({files:[ticFile]}).catch(e=>{if(!e||e.name!=='AbortError')toast(t('Partage impossible : utilisez le bouton en dessous'))});return}}catch(e){}
+  toast(t('Ce téléphone ne partage pas le fichier ici : utilisez le bouton en dessous'))}
+/* Réglages du ticket */
+function ticPick(k){const L=k==='tLogo',u=S.set[k],cur=L?ticLogo():ticPhoto(),lab=L?t('Logo'):t('Photo en haut');
+  const fromPage=L&&u==null&&S.page&&okImg(S.page.logo),ex=u==null&&DEMO&&!fromPage;
+  const inp=`<input type="file" accept="image/*" style="display:none" onchange="qrPickFile(this,'${k}')">`;
+  return `<div class="qrpick" id="qp_${k}">${qrBusy===k?`<span style="font-size:26px">⏳</span><span class="muted">${t('Envoi…')}</span>`
+   :cur?`<img src="${esc(cur)}" alt="${esc(lab)}" style="${L?'width:96px;height:96px;border-radius:50%;object-fit:cover':'height:96px;object-fit:cover'}"><b>${esc(lab)} ✓</b>${fromPage?`<span class="muted" style="font-size:12px">${t('celui de votre page client')}</span>`:ex?`<span class="muted" style="font-size:12px">${t('exemple')}</span>`:''}
+     <div class="row" style="gap:6px;justify-content:center;flex-wrap:wrap"><label class="btn sm ghost" style="padding:8px 10px">${t('Changer')}${inp}</label><button class="btn sm ghost" onclick="qrDel('${k}')">${t('Retirer')}</button></div>`
+   :`<label><span style="font-size:28px;line-height:1">＋</span><b>${esc(lab)}</b><span class="muted" style="font-size:13px">${L?t('Votre logo, il sera rond'):t('Facultatif : votre salle, un plat…')}</span>${inp}</label>${L&&u===''&&S.page&&okImg(S.page.logo)?`<button class="btn sm ghost" onclick="S.set.tLogo=null;save();qrRefresh()">${t('Mettre le logo de ma page')}</button>`:''}`}</div>`}
+function ticPrevUpd(){const e=document.getElementById('ticPrev');if(!e)return;const a=document.getElementById('tic_s'),b=document.getElementById('tic_m');
+  ticDraft=a&&b?{sous:a.value,msg:b.value}:null;try{e.innerHTML=ticHTML(ticSample())}finally{ticDraft=null}}
+function ticColor(c){S.set.tCol=c;save();document.querySelectorAll('.ticcol').forEach(b=>b.classList.toggle('on',b.dataset.c===c));ticPrevUpd()}
+function ticSave(quiet){if(document.getElementById('tic_s')){S.set.tSous=val('tic_s').trim().slice(0,60);S.set.tMsg=val('tic_m').trim().slice(0,120);save()}if(!quiet)toast(t('Enregistré'));ticPrevUpd()}
+function ticCard(){const s=S.set,c=ticCol();
+  return `<section class="card" id="ticCard"><div class="lbl">🧾 ${t('Ticket du client')}</div>
+   <div class="muted" style="font-size:14px">${t('Votre logo et votre nom sur chaque ticket : à l’écran, en image ou en PDF pour WhatsApp, et sur le papier.')}</div>
+   <div class="qrrow">${ticPick('tLogo')}${ticPick('tPhoto')}</div>
+   <label class="f">${t('Petite phrase sous le nom')} (${t('facultatif')})<input id="tic_s" maxlength="60" value="${esc(s.tSous||'')}" placeholder="Ex : Cuisine sénégalaise · Liberté 6" oninput="ticPrevUpd()"></label>
+   <label class="f">${t('Message en bas du ticket')}<input id="tic_m" maxlength="120" value="${esc(s.tMsg||'')}" placeholder="Jërëjëf ! Merci et à bientôt" oninput="ticPrevUpd()"></label>
+   <div class="lbl">${t('Couleur du ticket')}</div>
+   <div class="ticcols">${TIC_COLS.map(k=>`<button class="ticcol ${k===c?'on':''}" data-c="${k}" style="background:${k}" onclick="ticColor('${k}')" aria-label="${t('Couleur')} ${k}"></button>`).join('')}</div>
+   <div class="lbl">${t('Aperçu')}</div>
+   <div class="ticwrap" id="ticPrev">${ticHTML(ticSample())}</div>
+   <div class="muted" style="font-size:13px">${t('Sur le papier de la petite imprimante (58 mm), le logo sort en noir et blanc, sans la photo ni la couleur.')}</div>
+   <div class="grid2"><button class="btn alt" onclick="ticSave(true);ticMake('_ex','img')">🖼️ ${t('Voir en image')}</button><button class="btn" onclick="ticSave()">${t('Enregistrer')}</button></div></section>`}
 function vitPage(){const P=pageCollect();S.page=P;P.photos=Array.isArray(P.photos)?P.photos:[];return P}
 async function vitPick(inp,kind){const f=inp.files&&inp.files[0];inp.value='';if(!f||vitBusy)return;const P=vitPage();
   if(kind==='photo'&&P.photos.length>=3)return toast('3 photos maximum');
