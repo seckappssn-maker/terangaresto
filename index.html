@@ -62,6 +62,16 @@ main{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;flex-directio
 .lbl{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .muted{color:var(--muted)}
 .big{font-family:var(--f-display);font-size:30px;font-weight:800}
+.payqr{align-items:center;text-align:center;gap:8px}
+.payqr .qrimg{display:block;background:#fff;padding:8px;border-radius:14px;max-width:100%;max-height:52vh;object-fit:contain}
+.payqr .qrsvg{background:#fff;padding:12px;border-radius:14px;width:min(64vw,240px)}
+.payqr .qrsvg svg{display:block;width:100%;height:auto}
+.payqr .amt{font-family:var(--f-display);font-size:36px;font-weight:800;line-height:1.1}
+.payqr .chk{background:var(--ok-soft);color:var(--ok);border-radius:12px;padding:10px 12px;font-weight:700;font-size:14px;text-align:left}
+.qrrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qrpick{border:1.5px dashed var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;min-width:0}
+.qrpick img{width:100%;max-height:170px;object-fit:contain;background:#fff;border-radius:10px}
+.qrpick label{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:12px 4px;width:100%}
 .btn{border:0;border-radius:12px;padding:13px 16px;font-weight:700;font-size:16px;cursor:pointer;background:var(--bissap);color:var(--on-accent);min-height:48px}
 .btn.alt{background:var(--bissap-soft);color:var(--bissap)}
 .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
@@ -510,7 +520,7 @@ function annoncePrete(o){if(!me||me.role==='cuisine'||tab==='ecran')return;if(me
   if(voixOn)setTimeout(()=>parler(`Commande numéro ${o.n} prête. `+(o.type==='place'?(o.table?'Table '+o.table:'Sur place'):o.type==='livraison'?'Livraison':'À emporter')),700)}
 function annonceLiv(o){if(!me||me.role==='cuisine'||me.role==='serveur'||tab==='ecran')return;const nom=o.livPar||o.livreur||'Le livreur';
   if(o.livFait){if(Date.now()-new Date(o.livFait).getTime()>15*60000)return;const du=+o.livDu||0;
-    bandeau(`<div><div class="big">🛵 n°${o.n} livrée</div><div class="sm">${esc(nom)}${du>0?' a encaissé '+F(du)+' : il doit le remettre à la caisse':' · rien à encaisser'}</div></div>`,'#1F9D5B');
+    bandeau(`<div><div class="big">🛵 n°${o.n} livrée</div><div class="sm">${esc(nom)}${(o.livPay==='wave'||o.livPay==='om')?' · le client a payé '+F(+o.livPayM||0)+' par '+(o.livPay==='om'?'Orange Money':'Wave')+' : vérifiez sur votre téléphone':du>0?' a encaissé '+F(du)+' : il doit le remettre à la caisse':' · rien à encaisser'}</div></div>`,'#1F9D5B');
     if(voixOn)setTimeout(()=>parler(`Commande numéro ${o.n} livrée`),700);return}
   if(o.livRetour){if(Date.now()-new Date(o.livRetour).getTime()>15*60000)return;
     bandeau(`<div><div class="big">↩️ n°${o.n} : client absent</div><div class="sm">${esc(nom)} revient avec la commande${o.livRetourNote?' · '+esc(o.livRetourNote):''}</div></div>`,'#B3261E');
@@ -834,7 +844,7 @@ function valider(payer){
   if(cart.type==='livraison')applyLiv(o,cart.livSel,cart.livreur,cart.livTel);
   S.orders.push(o);save();cart=newCart();if(viaTL)tlSend(o.id);
   if(payer==='especes'){render();cashModal(o.id)}
-  else if(payer==='wave'||payer==='om'){finishPay(o,payer)}
+  else if(payer==='wave'||payer==='om'){if(qrDispo(payer)){render();qrPayModal(o.id,payer)}else finishPay(o,payer)}
   else if(payer){render();payModal(o.id)}
   else{toast(o.statut==='cuisine'?'Commande n°'+n+' envoyée en cuisine':'Commande n°'+n+' enregistrée (rien pour la cuisine)');render();apresPaie(o)}
 }
@@ -920,7 +930,8 @@ function livRow(o){const cais=me.role!=='serveur',pos=geoUrl(o.client);
   return `<div class="row"><span>🛵 ${o.livreur?esc(o.livreur)+(o.livExterne?' (externe)':''):`<span class="muted">${t('Pas encore de livreur')}</span>`} ${etat}</span>${cais?`<button class="btn sm ghost" onclick="livModal('${o.id}')">${o.livreur?t('Changer'):t('Choisir')}</button>${o.livreurTel?`<button class="btn sm alt" onclick="waLivreur('${o.id}')">${t('WhatsApp livreur')}</button>`:''}`:''}${posH}</div>
    ${cais&&!o.livreur&&S.set.livCode&&o.statut!=='servie'?`<button class="btn sm" style="background:#0E2A57" onclick="tlSend('${o.id}',this)">🛵 Envoyer à ${esc(tlNom())}</button>`:''}
    ${esp&&!o.livFait?`<div class="muted" style="font-size:13px">${esc(o.livreur)} voit cette livraison dans son espace.</div>`:''}
-   ${chezLiv(o)?`<div class="row between" style="background:var(--ochre-soft);border-radius:10px;padding:8px 10px"><span>💰 <b>${F(o.livDu)}</b> chez ${esc(o.livPar||o.livreur||'le livreur')}</span>${cais?`<button class="btn sm ok" onclick="livVerse(['${o.id}'])">Reçu du livreur</button>`:''}</div>`:''}`}
+   ${chezLiv(o)?`<div class="row between" style="background:var(--ochre-soft);border-radius:10px;padding:8px 10px"><span>💰 <b>${F(o.livDu)}</b> chez ${esc(o.livPar||o.livreur||'le livreur')}</span>${cais?`<button class="btn sm ok" onclick="livVerse(['${o.id}'])">Reçu du livreur</button>`:''}</div>`:''}
+   ${livPayW(o)?`<div class="row between" style="background:var(--ok-soft);border-radius:10px;padding:8px 10px;flex-wrap:wrap"><span>📱 <b>${F(+o.livPayM||tot(o))}</b> payé par ${o.livPay==='om'?'Orange Money':'Wave'} · ${t('à vérifier sur votre téléphone')}</span>${cais?`<button class="btn sm ok" onclick="livPayOk('${o.id}')">${lpConf===o.id?t('Sûr ? Touchez encore'):t('Reçu sur mon')+' '+(o.livPay==='om'?'OM':'Wave')+' ✓'}</button>`:''}</div>`:''}`}
 let versConf='';
 function vLivArgent(){if(!me||me.role==='serveur'||me.role==='cuisine')return '';const L=S.orders.filter(chezLiv);if(!L.length)return '';
   const g={};L.forEach(o=>{const k=o.livreurId||o.livreur||'?';(g[k]=g[k]||{nom:o.livPar||o.livreur||'Livreur',L:[]}).L.push(o)});
@@ -1083,7 +1094,7 @@ function drawPay(){
       <label class="f">Wave<input id="px_w" inputmode="numeric" value="${esc(pay.pw)}" oninput="pay.pw=this.value;updMix(${T})"></label>
       <label class="f">Orange Money<input id="px_o" inputmode="numeric" value="${esc(pay.po)}" oninput="pay.po=this.value;updMix(${T})"></label></div>
       <div class="total" style="font-size:20px"><span>${t('Reste')}</span><span id="mixR">${F(T)}</span></div>`:''}
-   ${pay.mode==='wave'||pay.mode==='om'?`<div class="card"><div class="muted">Le client envoie ${F(T)} sur le numéro ${pay.mode==='wave'?'Wave':'Orange Money'} :</div><div class="big">${esc(pay.mode==='wave'?S.set.wave:S.set.om)}</div><div class="muted">Vérifiez le SMS de confirmation avant de valider.</div></div>`:''}
+   ${pay.mode==='wave'||pay.mode==='om'?payQrBox(pay.mode,T):''}
    ${pay.mode==='credit'?`<label class="f">${t('Client')}<select id="p_cl" onchange="pay.clientId=this.value;drawPay()"><option value="">+ Nouveau client</option>${S.clients.map(c=>`<option value="${c.id}" ${pay.clientId===c.id?'selected':''}>${esc(c.nom)} · ${t('Dette')} ${F(detteClient(c))}</option>`).join('')}</select></label>
       ${pay.clientId?'':`<div class="row"><label class="f">Nom<input id="p_nn" value="${esc(pay.newNom)}" oninput="pay.newNom=this.value"></label><label class="f">${t('Téléphone')}<input id="p_nt" inputmode="tel" value="${esc(pay.newTel)}" oninput="pay.newTel=this.value"></label></div>`}`:''}
    ${pay.mode==='abonne'?(S.abonnes.length?`<label class="f">Abonné<select id="p_ab" onchange="pay.abId=this.value"><option value="">Choisir…</option>${S.abonnes.map(a=>`<option value="${a.id}">${esc(a.nom)} · ${restantAb(a)} repas restants</option>`).join('')}</select></label>`:'<div class="muted">Aucun abonné. Ajoutez-en dans Plus › Abonnés.</div>'):''}
@@ -1100,11 +1111,12 @@ function partageUI(o,T){
    <div class="total" style="font-size:22px"><span>${t('Reste')}</span><span>${F(R)}</span></div>
    <div class="card" style="gap:8px">
     <div class="row between"><b>${t('Personne')} ${P.length+1}</b><span class="muted">${left>1?t('Part égale')+' : '+F(share):t('Dernière personne')}</span></div>
-    <label class="f">${t('Il paie')} (F)<input id="pp_m" inputmode="numeric" value="${esc(pay.pm)}" oninput="pay.pm=this.value"></label>
+    <label class="f">${t('Il paie')} (F)<input id="pp_m" inputmode="numeric" value="${esc(pay.pm)}" oninput="pay.pm=this.value;const a=document.getElementById('ppAmt');if(a)a.textContent=F(+this.value||0)"></label>
     <div class="muted" style="font-size:14px">${t('Ou touchez ce qu\'il a mangé')} :</div>
     <div class="chips" style="flex-wrap:wrap">${o.items.map(i=>`<button class="chip" onclick="pay.pm=String((pay.byItems?(+pay.pm||0):0)+${i.prix});pay.byItems=true;drawPay()">${esc(i.nom)} ${F(i.prix)}</button>`).join('')}
      <button class="chip" onclick="pay.pm='${share}';pay.byItems=false;drawPay()">${t('Part égale')}</button></div>
     <div class="modes" style="grid-template-columns:repeat(3,1fr)">${['especes','wave','om'].map(m=>`<button class="mode ${pay.pmode===m?'on':''}" onclick="pay.pm=val('pp_m');pay.pmode='${m}';drawPay()">${m==='om'?'OM':mName(m)}</button>`).join('')}</div>
+    ${pay.pmode==='wave'||pay.pmode==='om'?payQrBox(pay.pmode,+pay.pm||0,'ppAmt'):''}
     <button class="btn ok full" style="min-height:56px" onclick="partPay()">${t('Encaisser cette part')}</button>
    </div>`;
 }
@@ -1517,6 +1529,9 @@ function vReglages(){const s=S.set;
    <label class="f">Nom du restaurant<input id="g_nom" value="${esc(s.nom)}"></label>
    <div class="row"><label class="f">${t('Téléphone')}<input id="g_tel" inputmode="tel" value="${esc(s.tel)}"></label><label class="f">Adresse<input id="g_adr" value="${esc(s.adresse)}"></label></div>
    <div class="row"><label class="f">Numéro Wave<input id="g_w" inputmode="tel" value="${esc(s.wave)}"></label><label class="f">Numéro Orange Money<input id="g_o" inputmode="tel" value="${esc(s.om)}"></label></div>
+   <div class="lbl" style="margin-top:4px">${t('Codes QR pour être payé plus vite')}</div>
+   <div class="qrrow">${qrPick('qrWave','Wave')}${qrPick('qrOm','Orange Money')}</div>
+   <div class="muted" style="font-size:13px">${t('Dans Wave ou Max it, ouvrez « Mon code QR », faites une capture d’écran et ajoutez-la ici. Le QR s’affiche quand vous touchez Wave ou OM à la caisse, et chez le livreur.')}</div>
    <label class="f">${t('Frais de livraison')} par défaut (F)<input id="g_f" inputmode="numeric" value="${esc(s.fraisLiv)}"></label>
    <button class="btn" onclick="Object.assign(S.set,{nom:val('g_nom'),tel:val('g_tel'),adresse:val('g_adr'),wave:val('g_w'),om:val('g_o'),fraisLiv:+val('g_f')||0});save();render();toast('Enregistré')">${t('Enregistrer')}</button></section>
   ${tlCard()}
@@ -1608,6 +1623,55 @@ function vitShrink(file,W,H,q,fit){return new Promise((res,rej)=>{const r=new Fi
   const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);
   const sc=fit==='contain'?Math.min(W/im.width,H/im.height):Math.max(W/im.width,H/im.height),w=im.width*sc,hh=im.height*sc;x.drawImage(im,(W-w)/2,(H-hh)/2,w,hh);
   const url=c.toDataURL('image/jpeg',q);if(c.toBlob)c.toBlob(b=>res({blob:b,url}),'image/jpeg',q);else res({blob:null,url})};im.src=r.result};r.readAsDataURL(file)})}
+/* QR Wave / Orange Money du patron : le client scanne, paie, et le caissier vérifie avant de valider */
+let qrBusy='',lpConf='';
+const qrOk=u=>typeof u==='string'&&(/^https:\/\//.test(u)||/^data:image\//.test(u));
+/* Le QR reste net mais sous 380 Ko (limite du stockage : 400 Ko) */
+function qrShrink(file,M){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=()=>rej(new Error('img'));im.onload=()=>{
+  const go=(M,q)=>{const sc=Math.min(1,M/im.width,(M*2)/im.height),W=Math.max(1,Math.round(im.width*sc)),H=Math.max(1,Math.round(im.height*sc));
+    const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);x.drawImage(im,0,0,W,H);
+    if(!c.toBlob)return res({blob:null,url:c.toDataURL('image/jpeg',q)});
+    c.toBlob(b=>{if(!b)return rej(new Error('blob'));if(b.size>380000&&M>480)return go(Math.round(M*.8),Math.max(.6,q-.1));res({blob:b,url:c.toDataURL('image/jpeg',q)})},'image/jpeg',q)};
+  go(M,.88)};im.src=r.result};r.readAsDataURL(file)})}
+function qrPick(k,label){const u=S.set[k];
+  const inp=`<input type="file" accept="image/*" style="display:none" onchange="qrPickFile(this,'${k}')">`;
+  return `<div class="qrpick" id="qp_${k}">${qrBusy===k?`<span style="font-size:26px">⏳</span><span class="muted">${t('Envoi du QR…')}</span>`
+   :qrOk(u)?`<img src="${esc(u)}" alt="QR ${esc(label)}"><b>${esc(label)} ✓</b><div class="row" style="gap:6px;justify-content:center;flex-wrap:wrap"><label class="btn sm ghost" style="padding:8px 10px">${t('Changer')}${inp}</label><button class="btn sm ghost" onclick="qrDel('${k}')">${t('Retirer')}</button></div>`
+   :`<label><span style="font-size:28px;line-height:1">＋</span><b>QR ${esc(label)}</b><span class="muted" style="font-size:13px">${t('Photo ou capture d’écran')}</span>${inp}</label>`}</div>`}
+function qrRefresh(){[['qrWave','Wave'],['qrOm','Orange Money']].forEach(([k,l])=>{const e=document.getElementById('qp_'+k);if(e)e.outerHTML=qrPick(k,l)})}
+async function qrPickFile(inp,k){const f=inp.files&&inp.files[0];inp.value='';if(!f||qrBusy)return;
+  qrBusy=k;qrRefresh();const old=S.set[k];
+  try{
+    if(DEMO){const r=await qrShrink(f,520);S.set[k]=r.url}
+    else{if(!SB||!USER)throw new Error('network');const r=await qrShrink(f,900);if(!r.blob)throw new Error('blob');
+      const path=USER.id+'/qr-'+uid()+'.jpg';const up=await SB.storage.from(PH_BUCKET).upload(path,r.blob,{contentType:'image/jpeg',cacheControl:'31536000',upsert:false});
+      if(up.error)throw up.error;S.set[k]=SB.storage.from(PH_BUCKET).getPublicUrl(path).data.publicUrl}
+    save();if(old&&old!==S.set[k])storageRemove([old]);toast(t('QR enregistré ✓'))
+  }catch(e){const m=String(e&&e.message||e);toast(/img|blob/.test(m)?'Image illisible, essayez une autre':/fetch|network|Failed/i.test(m)?'Pas de connexion : le QR n’est pas envoyé':/row-level|policy|Unauthorized|403/i.test(m)?'QR refusé : abonnement terminé ?':'QR non envoyé : '+m)}
+  qrBusy='';qrRefresh()}
+function qrDel(k){const old=S.set[k];S.set[k]='';save();if(old)storageRemove([old]);qrRefresh();toast(t('QR retiré'))}
+/* Y a-t-il quelque chose à montrer au client pour ce moyen ? (QR, numéro, ou la démo) */
+function qrDispo(m){return DEMO||qrOk(S.set[m==='om'?'qrOm':'qrWave'])||!!String(S.set[m==='om'?'om':'wave']||'').trim()}
+function payQrBox(mode,T,amtId){const W=mode!=='om',u=S.set[W?'qrWave':'qrOm'],num=String(S.set[W?'wave':'om']||'').trim(),nm=W?'Wave':'Orange Money';
+  const img=qrOk(u)?`<img class="qrimg" src="${esc(u)}" alt="QR ${nm}">`:DEMO?`<div class="qrsvg">${qrSvg('Exemple Teranga Resto')}</div><div class="muted" style="font-size:13px">${t('Exemple : mettez votre vrai QR dans Plus › Réglages')}</div>`:'';
+  return `<div class="card payqr"><div class="lbl">📱 ${t('Le client scanne et paie')} · ${nm}</div>${img}
+   <div class="amt"${amtId?` id="${amtId}"`:''}>${F(T)}</div>${num?`<div class="muted">${img?t('ou au numéro'):t('Au numéro')} <b>${esc(num)}</b></div>`:''}
+   ${!img&&!num?`<div class="muted">${t('Ajoutez votre QR ou votre numéro')} ${nm} : Plus › ${t('Réglages')}</div>`:''}
+   <div class="chk">✅ ${t('Avant de valider : le client vous montre « Paiement réussi » avec le montant, ou vous voyez l’argent arrivé sur votre téléphone.')}</div></div>`}
+/* Bouton rapide Wave / OM de la caisse : on montre le QR, puis « Paiement reçu » → payée + numéro du client comme avant */
+function qrPayModal(id,mode){const o=S.orders.find(x=>x.id===id);if(!o)return;
+  modal(`<h2>${mode==='om'?'Orange Money':'Wave'} · n°${o.n}</h2>${payQrBox(mode,tot(o))}
+   <button class="btn ok full" style="min-height:60px;font-size:19px" onclick="qrPayOk('${o.id}','${mode}')">✅ ${t('Paiement reçu')}</button>
+   <button class="btn ghost full" onclick="qrPayLater('${o.id}')">${t('Payer plus tard')}</button>`)}
+function qrPayOk(id,mode){const o=S.orders.find(x=>x.id===id);if(!o){closeM();return}if(o.paye){closeM();render();return}finishPay(o,mode)}
+function qrPayLater(id){const o=S.orders.find(x=>x.id===id);closeM();render();if(o){toast('n°'+o.n+' · '+t('À payer'));apresPaie(o)}}
+/* Livraison : le client a payé par Wave / OM au patron chez le livreur → le patron vérifie sur son téléphone */
+const livPayW=o=>!o.annule&&o.type==='livraison'&&o.livFait&&(o.livPay==='wave'||o.livPay==='om')&&!o.livPayOk&&(!o.paye||o.mode==='credit');
+function livPayOk(id){const o=S.orders.find(x=>x.id===id);if(!o||!livPayW(o))return;
+  if(lpConf!==id){lpConf=id;render();toast(t('Touchez encore si l’argent est bien arrivé'));setTimeout(()=>{if(lpConf===id){lpConf='';softRender()}},6000);return}
+  lpConf='';const now=new Date().toISOString(),a=+o.livPayM||tot(o);o.livPayOk=now;
+  if(o.paye&&o.mode==='credit'){const c=o.clientId&&S.clients.find(x=>x.id===o.clientId);if(c)c.paiements.push({date:now,montant:a,mode:o.livPay});o.encPar=me.nom;save();render();toast('n°'+o.n+' · '+F(a)+' '+t('reçu'));return}
+  o.encPar=me.nom;finishPay(o,o.livPay)}
 function vitPage(){const P=pageCollect();S.page=P;P.photos=Array.isArray(P.photos)?P.photos:[];return P}
 async function vitPick(inp,kind){const f=inp.files&&inp.files[0];inp.value='';if(!f||vitBusy)return;const P=vitPage();
   if(kind==='photo'&&P.photos.length>=3)return toast('3 photos maximum');

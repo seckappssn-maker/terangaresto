@@ -71,6 +71,12 @@ input:focus,.btn:focus-visible{outline:3px solid var(--bissap);outline-offset:1p
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:99px;font-weight:700;z-index:40;max-width:92%;text-align:center}
 .hint{font-size:14px;color:var(--muted);margin-top:6px}
 .note{background:var(--bissap-soft);border-radius:14px;padding:12px 14px;font-size:15px;margin-top:10px}
+.pay{border:2px solid var(--ok);border-radius:16px;padding:12px;margin:10px 0;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.pay .row{width:100%}
+.pay .qrimg{display:block;background:#fff;padding:8px;border-radius:14px;max-width:100%;max-height:55vh;object-fit:contain}
+.qrsvg{background:#fff;padding:12px;border-radius:14px;width:min(64vw,240px)}.qrsvg svg{display:block;width:100%;height:auto}
+.pay .amt{font-family:var(--f-display);font-weight:800;font-size:34px;line-height:1.1}
+.pay .chk{background:var(--ok-soft);color:var(--ok);border-radius:12px;padding:10px 12px;font-weight:700;font-size:14px;text-align:left;width:100%}
 .foot{text-align:center;color:var(--muted);font-size:13px;margin-top:18px}
 .foot button{background:none;border:0;color:var(--bissap);font:700 15px var(--f-body);cursor:pointer;padding:8px}
 .demo{background:#7B3FA0;color:#fff;text-align:center;border-radius:12px;padding:8px 10px;font-weight:700;font-size:14px;margin-bottom:12px}
@@ -101,7 +107,7 @@ const q=new URLSearchParams(location.search);
 const DEMO=q.get('demo')==='1';
 const CODE=String(q.get('r')||'').trim().toUpperCase();
 const KEY='trliv-'+CODE;
-let SB=null,ACC=lsGet(KEY,null),V=null,ARM='',BUSY=false,timer=null,seen=null,audio=null;
+let SB=null,ACC=lsGet(KEY,null),V=null,ARM='',BUSY=false,timer=null,seen=null,audio=null,PAYW={};
 const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const isHome=()=>!!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));
 function toast(m){let t=document.querySelector('.toast');if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}t.textContent=m;clearTimeout(t._t);t._t=setTimeout(()=>t.remove(),3200)}
@@ -122,11 +128,22 @@ function homeIcon(nom){try{const base=location.href.split(/[?#]/)[0].replace(/li
 
 /* ---------- Données de la démo ---------- */
 function demoVue(){const n=Date.now(),iso=m=>new Date(n-m*60000).toISOString();
-  return {ok:true,resto:{nom:'Restaurant Teranga (exemple)',tel:'77 000 00 00'},me:{id:'d',nom:'Ibou'},orders:[
+  return {ok:true,resto:{nom:'Restaurant Teranga (exemple)',tel:'77 000 00 00',wave:'77 000 00 00',om:'77 000 00 00'},me:{id:'d',nom:'Ibou'},orders:[
     {id:'a',n:12,date:iso(25),statut:'prete',client:{nom:'Awa Ndiaye',tel:'770000002',quartier:'Liberté 6, près de la pharmacie',geo:{lat:14.7167,lng:-17.4677}},items:[{q:2,nom:'Thiéboudienne'},{q:2,nom:'Bissap'}],note:'Sans piment',frais:500,total:6500,du:6500,paye:false},
     {id:'b',n:14,date:iso(12),statut:'cuisine',client:{nom:'Moussa Fall',tel:'770000006',quartier:'Sacré-Cœur 3, villa 12'},items:[{q:1,nom:'Yassa poulet'}],note:'',frais:500,total:3500,du:0,paye:true,mode:'wave'},
     {id:'c',n:9,date:iso(80),statut:'servie',client:{nom:'Bineta Sow',tel:'770000007',quartier:'Point E'},items:[{q:3,nom:'Mafé'}],frais:1000,total:7000,du:7000,paye:false,livFait:iso(40),livDu:7000}]}}
 
+/* ---------- Paiement Wave / Orange Money au QR du restaurant ---------- */
+const qrOk=u=>typeof u==='string'&&/^https:\/\//.test(u);
+function payModes(){const R=V&&V.resto||{};return ['wave','om'].filter(k=>DEMO||qrOk(R[k==='om'?'qrOm':'qrWave'])||String(R[k]||'').trim())}
+function demoQr(){try{const q=qrcode(0,'M');q.addData('Exemple Teranga Resto');q.make();return q.createSvgTag({cellSize:4,margin:0,scalable:true})}catch(e){return '<div class="small muted" style="padding:30px 0">QR d’exemple</div>'}}
+function payBox(o){const R=V.resto||{},M=payModes(),m=PAYW[o.id],W=m!=='om',u=R[W?'qrWave':'qrOm'],num=String(R[W?'wave':'om']||'').trim(),nm=W?'Wave':'Orange Money',id=esc(o.id);
+  const img=qrOk(u)?'<img class="qrimg" src="'+esc(u)+'" alt="QR '+nm+' du restaurant">':DEMO?'<div class="qrsvg">'+demoQr()+'</div><div class="small muted">Exemple : ici s’affiche le vrai QR du restaurant</div>':'';
+  return '<div class="pay">'+(M.length>1?'<div class="row">'+M.map(k=>'<button class="btn sm'+(k===m?' go':'')+'" data-a="qrm" data-m="'+k+'" data-id="'+id+'">'+(k==='om'?'Orange Money':'Wave')+'</button>').join('')+'</div>':'')+
+    '<div class="small muted" style="font-weight:700">📱 Le client scanne et paie · '+nm+'</div>'+img+'<div class="amt">'+F(o.du)+'</div>'+
+    (num?'<div class="small">'+(img?'ou au numéro ':'Au numéro ')+'<b>'+esc(telFmt(num))+'</b></div>':'')+
+    '<div class="chk">✅ Avant de toucher LIVRÉ : le client vous montre « Paiement réussi » avec '+F(o.du)+'. L’argent va directement au restaurant.</div>'+
+    '<button class="btn sm" data-a="qrx" data-id="'+id+'">Non, il paie en espèces</button></div>'}
 /* ---------- Écrans ---------- */
 function render(){const A=$('app');
   if(!CODE&&!DEMO){A.innerHTML='<div class="card"><b>Lien incomplet</b><div class="hint">Demandez au restaurant de vous renvoyer votre lien d\'accès.</div></div>';return}
@@ -139,12 +156,12 @@ function render(){const A=$('app');
   A.innerHTML=(DEMO?'<div class="demo">Exemple : rien n\'est envoyé au restaurant</div>':'')+
     '<div class="tiles"><div class="tile"><div class="k">À livrer</div><div class="v">'+act.length+'</div></div><div class="tile money"><div class="k">Argent sur moi</div><div class="v">'+F(argent)+'</div></div></div>'+
     '<h2>À livrer · '+act.length+'</h2>'+(act.length?act.map(card).join(''):'<div class="empty">Pas de livraison pour vous. Le téléphone sonne quand le restaurant vous en donne une.</div>')+
-    '<h2>Livrées · '+done.length+'</h2>'+(done.length?'<div class="card">'+done.map(o=>'<div class="line"><span><b>n°'+esc(o.n)+'</b> · '+esc(o.client.quartier||o.client.nom||'')+'<div class="small muted">Livrée à '+hhmm(o.livFait)+'</div></span><span style="text-align:right"><b>'+(+o.livDu>0?F(o.livDu):'—')+'</b><div class="small '+(+o.livDu>0&&!o.livVerse&&!o.paye?'':'muted')+'">'+(+o.livDu>0?(o.livVerse||o.paye?'remis ✓':'à remettre'):'rien encaissé')+'</div></span></div>').join('')+
+    '<h2>Livrées · '+done.length+'</h2>'+(done.length?'<div class="card">'+done.map(o=>'<div class="line"><span><b>n°'+esc(o.n)+'</b> · '+esc(o.client.quartier||o.client.nom||'')+'<div class="small muted">Livrée à '+hhmm(o.livFait)+'</div></span><span style="text-align:right"><b>'+(+o.livDu>0?F(o.livDu):o.livPay?F(o.livPayM):'—')+'</b><div class="small '+(+o.livDu>0&&!o.livVerse&&!o.paye?'':'muted')+'">'+(+o.livDu>0?(o.livVerse||o.paye?'remis ✓':'à remettre'):o.livPay?'payé par '+(o.livPay==='om'?'OM':'Wave'):'rien encaissé')+'</div></span></div>').join('')+
       (argent>0?'<div class="note">Remettez <b>'+F(argent)+'</b> à la caisse du restaurant. La caisse le note, et ici ça passe à « remis ✓ ».</div>':'')+'</div>':'<div class="empty">Rien encore aujourd\'hui.</div>')+
     pushCard()+
     '<div class="foot">'+(V.resto.tel?'Restaurant : <b>'+esc(telFmt(V.resto.tel))+'</b> · ':'')+'<button data-a="out">Sortir</button></div>';
   pushPaint()}
-function card(o){const c=o.client||{},pos=c.geo&&isFinite(c.geo.lat)?c.geo:null,ar=ARM;
+function card(o){const c=o.client||{},pos=c.geo&&isFinite(c.geo.lat)?c.geo:null,ar=ARM,PM=payModes(),pw=+o.du>0&&PAYW[o.id];
   const st=o.livRetour?['p-bad','↩️ Client absent']:o.livPart?['p-route','🛵 En route']:o.statut==='cuisine'?['p-prep','🔥 En préparation']:['p-ok','✅ Prête : venez la chercher'];
   const nav=pos?'https://www.google.com/maps/dir/?api=1&destination='+pos.lat+','+pos.lng:c.maps&&/^https:\/\//.test(c.maps)?c.maps:c.quartier?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(c.quartier):'';
   const t=tel9(c.tel);
@@ -155,9 +172,9 @@ function card(o){const c=o.client||{},pos=c.geo&&isFinite(c.geo.lat)?c.geo:null,
     (t.length===9?'<div class="row"><a class="btn sm" href="tel:+221'+t+'">📞 Appeler</a><a class="btn sm" href="https://wa.me/221'+t+'" target="_blank" rel="noopener">💬 WhatsApp</a></div>':'')+
     '<div class="items">'+(o.items||[]).map(i=>esc(i.q)+' × '+esc(i.nom)).join(' · ')+'</div>'+(o.note?'<div class="small"><b>Note :</b> '+esc(o.note)+'</div>':'')+
     (o.livRetour?'<div class="note" style="margin-top:0;margin-bottom:8px">↩️ Rapportez la commande au restaurant. Si le client rappelle, touchez « Je pars ».</div>':'')+
-    (+o.du>0?'<div class="cash due">💰 À encaisser : '+F(o.du)+'</div>':'<div class="cash paid">✅ Déjà payé : rien à encaisser</div>')+
+    (+o.du>0?(PAYW[o.id]?payBox(o):'<div class="cash due">💰 À encaisser : '+F(o.du)+'</div>'+(PM.length?'<button class="btn sm" data-a="qr" data-id="'+esc(o.id)+'">📱 Le client paie par '+(PM.length>1?'Wave / Orange Money':PM[0]==='om'?'Orange Money':'Wave')+'</button>':'')):'<div class="cash paid">✅ Déjà payé : rien à encaisser</div>')+
     (o.livPart?'':'<button class="btn go big" data-a="route" data-id="'+esc(o.id)+'"'+(BUSY?' disabled':'')+'>🛵 Je pars avec la commande</button>')+
-    '<button class="btn ok big" data-a="livre" data-id="'+esc(o.id)+'"'+(BUSY?' disabled':'')+'>'+(ar==='livre:'+o.id?'Sûr ? Touchez encore':'✅ LIVRÉ'+(+o.du>0?' · j\'encaisse '+F(o.du):''))+'</button>'+
+    '<button class="btn ok big" data-a="livre" data-id="'+esc(o.id)+'"'+(BUSY?' disabled':'')+'>'+(ar==='livre:'+o.id?'Sûr ? Touchez encore':'✅ LIVRÉ'+(pw?' · payé par '+(pw==='om'?'OM':'Wave'):+o.du>0?' · j\'encaisse '+F(o.du):''))+'</button>'+
     '<button class="btn warn sm" style="margin-top:8px" data-a="retour" data-id="'+esc(o.id)+'"'+(BUSY?' disabled':'')+'>'+(ar==='retour:'+o.id?'Sûr ? Touchez encore':'Client absent : je reviens')+'</button></article>'}
 function renderLogin(A){const last=lsGet('trliv-last-'+CODE,{});
   A.innerHTML='<form class="card" id="fLog"><b style="font-size:19px">Entrez dans votre espace</b><div class="hint">Le restaurant vous a envoyé un code de 4 chiffres sur WhatsApp.</div>'+
@@ -192,13 +209,17 @@ async function load(notify){if(DEMO){setV(demoVue());render();return}
     setV(v,notify);if(!BUSY)render()}
   catch(e){const m=errMsg(e);if(/fermé|formule/i.test(m)){$('app').innerHTML='<div class="card"><b>'+esc(m)+'</b><div class="hint">Appelez le restaurant.</div></div>';return}if(!V)render();toast(m)}}
 function poll(){clearTimeout(timer);timer=setTimeout(async()=>{if(document.visibilityState==='visible'&&!BUSY)await load(true);poll()},15000)}
-async function act(a,id){if(DEMO){const o=V.orders.find(x=>x.id===id);if(o){const t=new Date().toISOString();if(a==='route')o.livPart=t;if(a==='livre'){o.livFait=t;o.livDu=o.du}if(a==='retour'){o.livRetour=t;o.livPart=null}}render();toast('Exemple : rien n\'est envoyé');return}
-  BUSY=true;render();try{const v=await call(a,id,{});setV(v);toast(a==='livre'?'Livraison notée ✓':a==='route'?'Bonne route 🛵':'Le restaurant est prévenu')}catch(e){toast(errMsg(e))}BUSY=false;ARM='';render()}
+async function act(a,id){const pay=a==='livre'&&PAYW[id]?PAYW[id]:'',pnm=pay==='om'?'Orange Money':'Wave';
+  if(DEMO){const o=V.orders.find(x=>x.id===id);if(o){const t=new Date().toISOString();if(a==='route')o.livPart=t;if(a==='livre'){o.livFait=t;if(pay&&+o.du>0){o.livPay=pay;o.livPayM=o.du;o.livDu=0}else o.livDu=o.du}if(a==='retour'){o.livRetour=t;o.livPart=null}}if(a==='livre')delete PAYW[id];ARM='';render();toast('Exemple : rien n\'est envoyé');return}
+  BUSY=true;render();try{const v=await call(a,id,pay?{pay}:{});if(a==='livre')delete PAYW[id];setV(v);toast(a==='livre'?(pay?'Livraison notée ✓ · payé par '+pnm:'Livraison notée ✓'):a==='route'?'Bonne route 🛵':'Le restaurant est prévenu')}catch(e){toast(errMsg(e))}BUSY=false;ARM='';render()}
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,id=el.dataset.id;
   if(a==='out'){lsSet(KEY,null);ACC=null;V=null;seen=null;render();return}
   if(a==='pon'){pushOn();return}
   if(a==='ptest'){rpc('resto_liv_push_test',{p_code:CODE,p_tel:ACC.tel,p_pin:ACC.pin}).then(()=>toast('Avis de test envoyé')).catch(x=>toast(errMsg(x)));return}
   if(a==='route'){act('route',id);return}
+  if(a==='qr'){const M=payModes();PAYW[id]=M[0]||'wave';ARM='';render();return}
+  if(a==='qrm'){PAYW[id]=el.dataset.m==='om'?'om':'wave';ARM='';render();return}
+  if(a==='qrx'){delete PAYW[id];ARM='';render();return}
   if(a==='livre'||a==='retour'){if(ARM!==a+':'+id){ARM=a+':'+id;render();setTimeout(()=>{if(ARM===a+':'+id){ARM='';render()}},6000);return}act(a,id);return}});
 document.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id!=='fLog')return;
   const tel=tel9($('l_tel').value),pin=String($('l_pin').value).replace(/\D/g,''),say=t=>{$('l_err').textContent=t};
@@ -212,7 +233,7 @@ document.addEventListener('pointerdown',()=>{try{audio=audio||new (window.AudioC
 /* ---------- Démarrage ---------- */
 if(CODE)homeIcon('');
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
-if(DEMO){load(false)}
+if(DEMO){try{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';s.onload=()=>{if(V&&Object.keys(PAYW).length)render()};document.head.appendChild(s)}catch(e){}load(false)}
 else if(ACC){V=lsGet(KEY+'-v',null);render();load(false).then(()=>{poll();pushResync()})}
 else render();
 </script>
