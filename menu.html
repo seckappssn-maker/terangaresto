@@ -79,6 +79,23 @@ main{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:8px 24px}
 .badge{position:absolute;top:10px;left:10px;border-radius:999px;padding:5px 12px;font-weight:800;font-size:calc(var(--fs)*.8)}
 .b-jour{background:var(--sky);color:#0B2433}
 .b-out{background:var(--bad);color:#fff}
+/* Live TikTok */
+.livebar{background:#E5252A;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;font-weight:800;font-size:calc(var(--fs)*.95)}
+.livebar .dot{width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.35);flex:none;animation:lvb 1.2s infinite}
+.livebar small{display:block;font-weight:600;font-size:calc(var(--fs)*.78);opacity:.95}
+@keyframes lvb{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.livebar .dot{animation:none}}
+.b-live{background:#E5252A;color:#fff}
+.reste{font-weight:800;font-size:calc(var(--fs)*.85);color:#E5252A}
+.reste.ok{color:var(--ok)}
+.rbar{height:8px;border-radius:99px;background:#F3D3D3;overflow:hidden}.rbar i{display:block;height:100%;background:#E5252A;border-radius:99px}
+.rbar.ok{background:var(--ok-soft)}.rbar.ok i{background:var(--ok)}
+.sec.live h2{color:#E5252A}
+.cat.lv{border-color:#E5252A;color:#E5252A}.cat.lv.on{background:#E5252A;color:#fff}
+.lvpay{background:#FFF1E6;color:#8A3A00;border-radius:12px;padding:10px 12px;font-weight:700;font-size:calc(var(--fs)*.88)}
+.paynum{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border-radius:10px;padding:8px 10px;margin-top:4px;color:var(--ink)}
+.paynum button{border:0;border-radius:8px;padding:6px 12px;font-weight:800;background:var(--blue);color:var(--on);cursor:pointer}
+.ltoast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:#13222C;color:#fff;padding:12px 16px;border-radius:14px;font-weight:700;z-index:60;max-width:90vw;text-align:center}
 .cb{padding:14px;display:flex;flex-direction:column;gap:6px;flex:1}
 .cb h3{font-size:calc(var(--fs)*1.15);line-height:1.2}
 .desc{color:var(--muted);font-size:calc(var(--fs)*.9)}
@@ -197,7 +214,8 @@ function demoData(){const wd=new Date().getDay();
     {id:'d7',nom:'Bissap',prix:300,cat:'Boissons',dispo:true,desc:'Jus de fleurs d\'hibiscus, bien frais.',jours:[],photos:[cup('#F3D3DC','#9B1D3D')]},
     {id:'d8',nom:'Bouye',prix:500,cat:'Boissons',dispo:true,desc:'Jus de pain de singe.',jours:[],photos:[cup('#EFE6D6','#E9DFC8')]},
     {id:'d9',nom:'Thiakry',prix:500,cat:'Desserts',dispo:true,desc:'Couscous de mil au lait caillé sucré.',jours:[],photos:[]}
-   ]}}
+   ],...(()=>{try{return new URLSearchParams(location.search).get('live')==='1'}catch(e){return false}})()?{live:{actif:true,debut:new Date(Date.now()-25*60000).toISOString(),paie:true,wave:'77 000 00 00',om:'77 000 00 00',
+     items:[{id:'d1',max:15,reste:12},{id:'d6',max:10,reste:3},{id:'d7',max:20,reste:0}]}}:{}}}
 
 /* ---------- Données ---------- */
 const CODE=(()=>{try{const q=new URLSearchParams(location.search);return (q.get('r')||q.get('c')||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)}catch(e){return ''}})();
@@ -219,9 +237,23 @@ async function boot(){
     if(!('logo' in d)){try{const v=await sb.rpc('resto_vitrine',{p_code:CODE});if(!v.error&&v.data)Object.assign(d,v.data)}catch(e){}}
     R=d;STATE='ok';store('trm.menu.'+CODE,d);
     for(const k in cart)if(!cI(k))delete cart[k];
-    render()}
+    render();liveTick()}
   catch(e){if(!R){STATE='net';render()}}
 }
+
+/* ---------- Live TikTok ---------- */
+function liveOn(){const L=R&&R.live;if(!L||!L.actif)return false;const d=new Date(L.debut).getTime();return !isFinite(d)||Date.now()-d<8*3600e3}
+const liveIt=id=>liveOn()?(R.live.items||[]).find(x=>x.id===id)||null:null;
+const liveReste=p=>{const x=liveIt(p.id);return x?Math.max(0,+x.reste||0):Infinity};
+function ltoast(m){let e=document.querySelector('.ltoast');if(!e){e=document.createElement('div');e.className='ltoast';e.setAttribute('role','status');document.body.appendChild(e)}e.textContent=m;clearTimeout(e._t);e._t=setTimeout(()=>e.remove(),2600)}
+function livePlein(p){if(!liveIt(p.id))return false;const r=liveReste(p);if(qOf(p)<r)return false;ltoast(r?t('Il en reste seulement')+' '+r:t('Épuisé'));return true}
+/* Toutes les 20 secondes pendant un live (1 minute sinon), la page reprend les portions qui restent */
+let liveT=null;
+function liveTick(){clearTimeout(liveT);liveT=setTimeout(async()=>{try{if(!IS_DEMO&&STATE==='ok'&&document.visibilityState==='visible'&&window.supabase){
+    const sb=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+    const r=await sb.rpc('resto_page_public',{p_code:CODE});const d=r&&r.data;
+    if(d&&d.ok){const avant=JSON.stringify(R.live||null),apres=JSON.stringify(d.live||null);
+      if(avant!==apres){R.live=d.live||null;const a=document.activeElement;if(!$('ovWrap').innerHTML&&!(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)))keepScroll(render)}}}}catch(e){}liveTick()},liveOn()?20000:60000)}
 
 /* ---------- Calculs ---------- */
 const plat=id=>R.plats.find(p=>p.id===id);
@@ -232,7 +264,7 @@ function cI(key){const i=key.indexOf('~'),p=plat(i<0?key:key.slice(0,i));if(!p)r
   if(i<0)return hasT(p)?null:{key,p,nom:p.nom,prix:p.prix,tl:''};const tl=(p.tailles||[]).find(x=>x.n===key.slice(i+1));return tl?{key,p,nom:p.nom+' ('+tl.n+')',prix:+tl.p||0,tl:tl.n}:null}
 const qOf=p=>Object.entries(cart).reduce((a,[k,q])=>a+((k===p.id||k.startsWith(p.id+'~'))?q:0),0);
 function prixTxt(p){if(!hasT(p))return F(p.prix);const v=p.tailles.map(x=>+x.p||0),a=Math.min(...v),b=Math.max(...v);return a===b?F(a):F(a).replace(/\s*F$/,'')+' – '+F(b)}
-function lines(){return Object.entries(cart).map(([k,q])=>{const c=cI(k);return c&&q>0&&c.p.dispo!==false?{...c,q}:null}).filter(Boolean)}
+function lines(){return Object.entries(cart).map(([k,q])=>{const c=cI(k);return c&&q>0&&c.p.dispo!==false&&!(liveIt(c.p.id)&&liveReste(c.p)<=0)?{...c,q}:null}).filter(Boolean)}
 function nItems(){return lines().reduce((a,l)=>a+l.q,0)}
 function subTot(){return lines().reduce((a,l)=>a+l.prix*l.q,0)}
 function choisir(id){const p=plat(id);if(!p)return;
@@ -242,7 +274,7 @@ function choisir(id){const p=plat(id);if(!p)return;
    <div class="tgrid">${p.tailles.map(x=>{const k=p.id+'~'+x.n,q=cart[k]||0;return `<div class="tb ${q?'on':''}"><div><b>${esc(x.n)}</b><div class="price">${F(+x.p||0)}</div></div>
      ${q?`<div class="qty"><button onclick="decT(decodeURIComponent('${encK(k)}'))" aria-label="Moins">−</button><b>${q}</b><button onclick="incT(decodeURIComponent('${encK(k)}'))" aria-label="Plus">+</button></div>`:`<button class="add" onclick="incT(decodeURIComponent('${encK(k)}'))">+ ${t('Ajouter')}</button>`}</div>`}).join('')}</div>
    <button class="add" style="width:100%" onclick="closeOrder()">OK</button></div></div>`}
-function incT(k){const c=cI(k);if(!c||c.p.dispo===false)return;cart[k]=Math.min(50,(cart[k]||0)+1);sent=false;saveCart();choisir(c.p.id)}
+function incT(k){const c=cI(k);if(!c||c.p.dispo===false||livePlein(c.p))return;cart[k]=Math.min(50,(cart[k]||0)+1);sent=false;saveCart();choisir(c.p.id)}
 function decT(k){const c=cI(k);cart[k]=Math.max(0,(cart[k]||0)-1);if(!cart[k])delete cart[k];saveCart();if(c)choisir(c.p.id)}
 function zones(){return Array.isArray(R.zones)?R.zones.filter(z=>z&&z.nom):[]}
 function frais(){if(mode!=='livraison')return 0;const z=zones().find(z=>z.nom===o.zone);return z?Math.max(0,+z.prix||0):0}
@@ -254,14 +286,16 @@ function photos(p){const ph=(Array.isArray(p.photos)?p.photos:[]).filter(u=>type
    :`<div class="noimg" aria-hidden="true"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 14h16a8 8 0 0 1-16 0zM2 14h20M12 6v3M8 4v2M16 4v2"/></svg></div>`;
   return `<div class="pics"><div class="strip" data-n="${ph.length}" onscroll="dotSync(this)">${inner}</div>${ph.length>1?`<div class="dots" aria-hidden="true">${ph.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:''}</div>`}
 function dotSync(el){const i=Math.round(el.scrollLeft/el.clientWidth);const d=el.parentNode.querySelectorAll('.dots i');d.forEach((x,j)=>x.classList.toggle('on',j===i))}
-function card(p,jour){const T=hasT(p),q=T?qOf(p):(cart[p.id]||0),out=p.dispo===false;
+function card(p,jour,live){const T=hasT(p),q=T?qOf(p):(cart[p.id]||0),lv=live?liveIt(p.id):null,rs=lv?liveReste(p):0,out=p.dispo===false||(lv&&rs<=0);
   return `<article class="card ${out?'out':''}">${photos(p)}
-   ${out?`<span class="badge b-out">${t('Épuisé')}</span>`:jour?`<span class="badge b-jour">${t('Plat du jour')}</span>`:''}
+   ${out?`<span class="badge b-out">${t('Épuisé')}</span>`:lv?`<span class="badge b-live">🔴 Live</span>`:jour?`<span class="badge b-jour">${t('Plat du jour')}</span>`:''}
    <div class="cb"><h3>${esc(p.nom)}</h3>${p.desc?`<div class="desc">${esc(p.desc)}</div>`:''}
+    ${lv&&!out?`<div class="reste ${rs>5?'ok':''}">${rs>5?t('Il en reste')+' '+rs:t('Plus que')+' '+rs+' : '+t('vite !')}</div><div class="rbar ${rs>5?'ok':''}"><i style="width:${Math.max(4,Math.min(100,Math.round(rs/Math.max(1,+lv.max||rs)*100)))}%"></i></div>`:''}
     <div class="cf"><span class="price">${prixTxt(p)}</span>
      ${out?`<button class="add" disabled>${t('Épuisé')}</button>`:T?`<button class="add" onclick="choisir('${esc(p.id)}')">${q?q+' · ':'+ '}${t('Choisir')}</button>`:q?`<div class="qty"><button onclick="dec('${esc(p.id)}')" aria-label="Moins de ${esc(p.nom)}">−</button><b aria-live="polite">${q}</b><button onclick="inc('${esc(p.id)}')" aria-label="Plus de ${esc(p.nom)}">+</button></div>`:`<button class="add" onclick="inc('${esc(p.id)}')">+ ${t('Ajouter')}</button>`}
     </div></div></article>`}
-function sections(){const wd=new Date().getDay(),P=R.plats||[];const S=[];
+function sections(){const wd=new Date().getDay(),LV=liveOn()?(R.live.items||[]).map(x=>plat(x.id)).filter(Boolean):[],P=(R.plats||[]).filter(p=>!LV.includes(p));const S=[];
+  if(LV.length)S.push({id:'live',nom:'🔴 '+t('Plats du live'),L:LV.slice().sort((a,b)=>(liveReste(a)<=0)-(liveReste(b)<=0)),live:true});
   const jour=P.filter(p=>Array.isArray(p.jours)&&p.jours.includes(wd)&&p.dispo!==false);
   if(jour.length)S.push({id:'jour',nom:t('Plat du jour'),L:jour,jour:true});
   const cats=[...CATS,...[...new Set(P.map(p=>p.cat))].filter(c=>!CATS.includes(c))];
@@ -271,17 +305,17 @@ function render(){const A=$('app');
   if(STATE==='load'){A.innerHTML=`<div class="state"><h1>Teranga Resto</h1><div class="muted">Chargement du menu…</div></div>`;return}
   if(STATE!=='ok'){const m={off:t('Cette page n\'est pas disponible pour le moment.'),notfound:t('Lien introuvable.'),net:t('Pas de connexion internet.')}[STATE];
     A.innerHTML=`<div class="state"><h1>${esc(m)}</h1>${STATE==='net'?`<button class="add" onclick="STATE='load';render();boot()">${t('Réessayer')}</button>`:'<div class="muted">Vérifiez le lien avec le restaurant.</div>'}</div>`;return}
-  const S=sections(),n=nItems();if(!catOn&&S[0])catOn=S[0].id;
+  const S=sections(),n=nItems();if((!catOn||!S.some(s=>s.id===catOn))&&S[0])catOn=S[0].id;if(S[0]&&S[0].live&&!render.lv){catOn='live'}render.lv=!!(S[0]&&S[0].live);
   document.title=(R.nom||'Restaurant')+' · Menu';
   const showSt=LAST&&!IS_DEMO&&['nouveau','envoi','accepte','refuse'].includes(LAST.st)&&Date.now()-LAST.at<3*3600000;
-  A.innerHTML=`${R.demo?`<div class="demo">Exemple de page client : menu et photos d'exemple</div>`:''}${showSt?`<div class="stmain">${statutBox()}</div>`:''}
+  A.innerHTML=`${liveOn()?`<div class="livebar"><span class="dot" aria-hidden="true"></span><div>${t('EN DIRECT SUR TIKTOK')}<small>${t('Commandez ici pendant le live : les plats du live sont en premier')}</small></div></div>`:''}${R.demo?`<div class="demo">Exemple de page client : menu et photos d'exemple</div>`:''}${showSt?`<div class="stmain">${statutBox()}</div>`:''}
   <header class="hero"><div class="hin">
    <div class="tools"><button class="tbtn" onclick="setBig()" aria-pressed="${BIG}" aria-label="${BIG?t('Texte normal'):t('Texte plus grand')}">${BIG?'A−':'A+'}</button><button class="tbtn" onclick="setLang()">${LANG==='wo'?'Français':'Wolof'}</button></div>
    <div class="hhead">${okImg(R.logo)?`<img class="rlogo" src="${esc(R.logo)}" alt="Logo ${esc(R.nom||'')}">`:''}<div><h1>${esc(R.nom||'Restaurant')}</h1></div></div>${R.texte?`<p>${esc(R.texte)}</p>`:''}
    <div class="chipsI">${R.horaires?`<span class="ci">🕒 ${esc(R.horaires)}</span>`:''}${R.adresse?`<span class="ci">📍 ${esc(R.adresse)}</span>`:''}${services().map(([k,l])=>`<span class="ci">${t(l)}</span>`).join('')}</div>
   </div></header>${vitHTML()}
-  <nav class="cats" aria-label="${t('Menu')}"><div class="in">${S.map(s=>`<button class="cat ${catOn===s.id?'on':''}" onclick="goCat('${s.id}')">${esc(s.jour?s.nom:t(s.nom))}</button>`).join('')}</div></nav>
-  <main>${S.map(s=>`<section class="sec" id="s_${s.id}"><h2>${esc(s.jour?s.nom:t(s.nom))}</h2><div class="grid">${s.L.map(p=>card(p,s.jour)).join('')}</div></section>`).join('')||'<div class="state"><div class="muted">Le menu arrive bientôt.</div></div>'}
+  <nav class="cats" aria-label="${t('Menu')}"><div class="in">${S.map(s=>`<button class="cat ${s.live?'lv':''} ${catOn===s.id?'on':''}" onclick="goCat('${s.id}')">${esc(s.live?'🔴 Live':s.jour?s.nom:t(s.nom))}</button>`).join('')}</div></nav>
+  <main>${S.map(s=>`<section class="sec ${s.live?'live':''}" id="s_${s.id}"><h2>${esc(s.jour||s.live?s.nom:t(s.nom))}</h2><div class="grid">${s.L.map(p=>card(p,s.jour,s.live)).join('')}</div></section>`).join('')||'<div class="state"><div class="muted">Le menu arrive bientôt.</div></div>'}
    ${services().some(([k])=>k==='place')?`<div style="padding-top:22px"><button class="add" style="width:100%" onclick="mode='place';openOrder()">${t('Réserver une table')}</button></div>`:''}
    <div class="foot">Page créée avec Teranga Resto · Seck Tech</div></main>
   <div class="bar"><button onclick="openOrder()" ${n?'':'disabled style="opacity:.55;cursor:default"'}><span><span class="n">${n}</span>${t('Ma commande')}</span><span>${F(subTot())}</span></button></div>`;
@@ -299,7 +333,7 @@ function vitBind(){const sl=$('slides'),n=vitPh().length;if(!sl||n<2)return;if(v
   sl.addEventListener('scroll',()=>{clearTimeout(sl._t);sl._t=setTimeout(mark,80)});sl.addEventListener('touchstart',()=>{vitTouch=Date.now()},{passive:true});
   if(!vitTimer)vitTimer=setInterval(()=>{const s=$('slides'),k=vitPh().length;if(!s||k<2||document.hidden||Date.now()-vitTouch<8000)return;s.scrollTo({left:((vitCur+1)%k)*s.clientWidth,behavior:'smooth'})},4500)}
 function goCat(id){catOn=id;document.querySelectorAll('.cat').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick')===`goCat('${id}')`));const e=$('s_'+id);if(e)e.scrollIntoView({behavior:'smooth',block:'start'})}
-function inc(id){const c=cI(id);if(!c||c.p.dispo===false)return;cart[id]=Math.min(50,(cart[id]||0)+1);sent=false;saveCart();keepScroll(render)}
+function inc(id){const c=cI(id);if(!c||c.p.dispo===false||livePlein(c.p))return;cart[id]=Math.min(50,(cart[id]||0)+1);sent=false;saveCart();keepScroll(render)}
 function dec(id){cart[id]=Math.max(0,(cart[id]||0)-1);if(!cart[id])delete cart[id];saveCart();keepScroll(render)}
 function keepScroll(fn){const y=window.scrollY,st=[...document.querySelectorAll('.strip')].map(s=>s.scrollLeft);fn();window.scrollTo(0,y);document.querySelectorAll('.strip').forEach((s,i)=>{if(st[i])s.scrollLeft=st[i]})}
 
@@ -307,7 +341,7 @@ function keepScroll(fn){const y=window.scrollY,st=[...document.querySelectorAll(
 function openOrder(){const sv=services().map(([k])=>k);if(!sv.includes(mode))mode=sv.length===1?sv[0]:(sv.includes(mode)?mode:'');sent=false;
   $('ovWrap').innerHTML=`<div class="ov" onclick="if(event.target===this)closeOrder()"><div class="sheet" role="dialog" aria-modal="true" aria-label="${t('Ma commande')}" id="sheet"></div></div>`;drawOrder()}
 function closeOrder(){$('ovWrap').innerHTML='';render()}
-function rd(){['zone','adr','heure','date','pers','nom','tel','note'].forEach(k=>{const e=$('o_'+k);if(e)o[k]=e.value});saveCart()}
+function rd(){['zone','adr','heure','date','pers','nom','tel','note','tt'].forEach(k=>{const e=$('o_'+k);if(e)o[k]=e.value});saveCart()}
 function drawOrder(){const L=lines(),sv=services(),Z=zones(),sh=$('sheet');if(!sh)return;
   const nd=new Date(),today=nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-'+String(nd.getDate()).padStart(2,'0');
   sh.innerHTML=`<div class="sh"><h2>${t('Ma commande')}</h2><button class="x" onclick="closeOrder()">${t('Fermer')}</button></div>
@@ -327,14 +361,16 @@ function drawOrder(){const L=lines(),sv=services(),Z=zones(),sh=$('sheet');if(!s
   </div>
   <div class="box"><div class="row2"><label class="f">${t('Votre nom')}<input id="o_nom" autocomplete="name" value="${esc(o.nom)}" oninput="rd();upd()"></label>
    <label class="f">${t('Votre téléphone')}<input id="o_tel" type="tel" autocomplete="tel" inputmode="tel" value="${esc(o.tel)}" oninput="rd();upd()"></label></div>
+   ${liveOn()?`<label class="f">${t('Votre nom TikTok')} (${t('facultatif')})<input id="o_tt" value="${esc(o.tt||'')}" placeholder="@votrenom" autocapitalize="off" autocorrect="off" oninput="rd();upd()"></label>`:''}
    <label class="f">${t('Note pour le restaurant')}<textarea id="o_note" rows="2" placeholder="Ex : sans piment, bien cuit…" oninput="rd();upd()">${esc(o.note)}</textarea></label></div>
+  ${liveOn()&&R.live.paie&&L.length&&!sent?`<div class="lvpay">💳 ${t('Pendant le live, on paie avant : après l’envoi, payez par Wave ou Orange Money. Le restaurant confirme dès qu’il voit l’argent.')}</div>`:''}
   <div class="box">${L.length?`<div class="sub"><span>${t('Sous-total')}</span><span>${F(subTot())}</span></div>`:''}
    ${mode==='livraison'?`<div class="sub"><span>${t('Frais de livraison')}</span><span>${Z.length&&o.zone?F(frais()):t('à confirmer')}</span></div>`:''}
    <div class="tot"><span>${t('Total')}</span><span>${F(subTot()+frais())}${mode==='livraison'&&!(Z.length&&o.zone)&&L.length?' +':''}</span></div></div>
   <div id="oerr" class="err" role="alert"></div>
   ${sent?'':`<button id="sendC" class="send main" onclick="envoyer()"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span id="sendCT"></span></button>
   <div class="muted" style="text-align:center">${t('La commande arrive directement au restaurant. Vous voyez ici quand elle est confirmée et prête.')}</div>`}
-  ${sent?`<div class="box" style="text-align:center">${statutBox()}<button class="add" onclick="cart={};sent=false;saveCart();closeOrder()">${t('Nouvelle commande')}</button></div>`:''}
+  ${sent?`<div class="box" style="text-align:center">${statutBox()}${LAST&&LAST.st==='plein'?'':`<button class="add" onclick="cart={};sent=false;saveCart();closeOrder()">${t('Nouvelle commande')}</button>`}</div>`:''}
   ${waOk()?`<a id="sendA" class="send alt" href="#" target="_blank" rel="noopener" onclick="return trySend(event)"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.6-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg><span id="sendT"></span></a>`:''}`;
   upd()}
 /* ---------- Position du client (GPS du téléphone) ---------- */
@@ -352,6 +388,7 @@ function geoAsk(){rd();const m=$('geoMsg'),b=$('geoB');
     {enableHighAccuracy:true,timeout:20000,maximumAge:60000})}
 function problem(){const L=lines();
   if(!mode)return t('Comment voulez-vous votre repas ?');
+  if(liveOn())for(const x of R.live.items||[]){const p=plat(x.id);if(p&&qOf(p)>liveReste(p)&&liveReste(p)>0)return t('Il ne reste que')+' '+liveReste(p)+' '+p.nom+' : '+t('changez la quantité.')}
   if(!L.length&&mode!=='place')return t('Choisissez au moins un plat.');
   if(mode==='livraison'&&zones().length&&!o.zone)return t('Choisissez la zone de livraison.');
   if(mode==='livraison'&&o.adr.trim().length<3)return t('Écrivez l\'adresse de livraison.');
@@ -361,7 +398,7 @@ function problem(){const L=lines();
   return ''}
 function message(){const L=lines(),M={livraison:'Livraison',emporter:'À emporter',place:'Sur place'}[mode];const z=zones().find(z=>z.nom===o.zone);
   const fd=d=>d?d.split('-').reverse().join('/'):'';
-  const out=[`Bonjour ${R.nom||''} 👋`,mode==='place'&&!L.length?'*Réservation de table* (depuis votre page)':'*Nouvelle commande* (depuis votre page)',''];
+  const out=[`Bonjour ${R.nom||''} 👋`,mode==='place'&&!L.length?'*Réservation de table* (depuis votre page)':liveOn()?'*Commande du live TikTok* 🔴'+(String(o.tt||'').trim()?' – @'+String(o.tt).trim().replace(/^@+/,''):''):'*Nouvelle commande* (depuis votre page)',''];
   out.push(`📍 ${M}`+(mode==='livraison'&&z?` – ${z.nom}`:''));
   if(L.length){out.push('');L.forEach(l=>out.push(`${l.q} × ${l.nom} — ${F(l.prix*l.q)}`))}
   if(mode==='livraison')out.push(`Livraison : ${z?F(z.prix):'à confirmer'}`);
@@ -391,11 +428,13 @@ let LAST=store('trm.last.'+(CODE||'DEMO')),stT=null;
 function newId(){try{return crypto.randomUUID()}catch(e){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})}}
 function envoyerCaisse(){const L=lines(),z=zones().find(z=>z.nom===o.zone);
   const d={mode,nom:o.nom.trim(),tel:o.tel.trim(),zone:mode==='livraison'&&z?z.nom:'',adr:mode==='livraison'?o.adr.trim():'',heure:o.heure||'',date:mode==='place'?o.date:'',pers:mode==='place'?Math.max(1,+o.pers||1):0,
-    frais:mode==='livraison'?frais():0,note:o.note.trim(),...(mode==='livraison'&&geoOk()?{geo:{lat:o.geo.lat,lng:o.geo.lng,acc:o.geo.acc||0}}:{}),items:L.map(l=>({pid:l.p.id,nom:l.nom,prix:l.prix,q:l.q,...(l.tl?{t:l.tl}:{})}))};
-  const id=newId();LAST={id,at:Date.now(),st:IS_DEMO?'demo':'envoi',n:null};store('trm.last.'+(CODE||'DEMO'),LAST);
+    frais:mode==='livraison'?frais():0,note:o.note.trim(),...(liveOn()&&L.length?{live:true,paie:!!R.live.paie,...(String(o.tt||'').trim()?{tiktok:'@'+String(o.tt).trim().replace(/^@+/,'').slice(0,38)}:{})}:{}),...(mode==='livraison'&&geoOk()?{geo:{lat:o.geo.lat,lng:o.geo.lng,acc:o.geo.acc||0}}:{}),items:L.map(l=>({pid:l.p.id,nom:l.nom,prix:l.prix,q:l.q,...(l.tl?{t:l.tl}:{})}))};
+  const id=newId();LAST={id,at:Date.now(),st:IS_DEMO?'demo':'envoi',n:null,...(d.live?{live:true,paie:d.paie,tot:subTot()+frais()}:{})};store('trm.last.'+(CODE||'DEMO'),LAST);
   if(IS_DEMO)return;
   try{fetch(SUPA_URL+'/rest/v1/rpc/resto_web_order',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',apikey:SUPA_KEY},body:JSON.stringify({p_code:CODE,p_id:id,p_data:d})})
-    .then(r=>{LAST.st=r.ok?'nouveau':'whatsapp';store('trm.last.'+CODE,LAST);if(sent)drawOrder();if(r.ok)suivre()})
+    .then(async r=>{let j=null;if(r.ok)try{j=await r.json()}catch(e){}
+      if(j&&j.ok===false&&j.plein){LAST.st='plein';LAST.msg=String(j.msg||'').slice(0,200);if(R&&R.live&&Array.isArray(j.items))R.live.items=j.items;store('trm.last.'+CODE,LAST);if(sent)drawOrder();return}
+      LAST.st=r.ok?'nouveau':'whatsapp';store('trm.last.'+CODE,LAST);if(sent)drawOrder();if(r.ok)suivre()})
     .catch(()=>{LAST.st='whatsapp';store('trm.last.'+CODE,LAST);if(sent)drawOrder()})}catch(e){}}
 async function suivre(){clearTimeout(stT);if(!LAST||IS_DEMO||!LAST.id)return;if(Date.now()-LAST.at>6*3600000)return;
   try{const r=await fetch(SUPA_URL+'/rest/v1/rpc/resto_web_order_statut',{method:'POST',headers:{'Content-Type':'application/json',apikey:SUPA_KEY},body:JSON.stringify({p_id:LAST.id})});
@@ -411,8 +450,14 @@ let AC=null;document.addEventListener('pointerdown',()=>{try{AC=AC||new (window.
 function sonPrete(){try{navigator.vibrate&&navigator.vibrate([300,150,300,150,600])}catch(e){}
   try{if(!AC)return;[0,.35].forEach((d,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=i?1318:988;g.gain.setValueAtTime(.0001,AC.currentTime+d);g.gain.exponentialRampToValueAtTime(.5,AC.currentTime+d+.02);g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d+.9);o.connect(g);g.connect(AC.destination);o.start(AC.currentTime+d);o.stop(AC.currentTime+d+1)})}catch(e){}}
 function lienSuivi(){if(!LAST||!LAST.i||!LAST.k)return'';try{return new URL('suivi.html?i='+encodeURIComponent(LAST.i)+'&k='+encodeURIComponent(LAST.k),location.href).href}catch(e){return''}}
+function payBox(){if(!LAST||!LAST.live||!LAST.paie||!R||!R.live)return '';const L=R.live,n=[['Wave',L.wave],['Orange Money',L.om]].filter(x=>String(x[1]||'').trim());if(!n.length)return '';
+  return `<div class="lvpay" style="margin-top:6px">💳 ${t('Pour confirmer, payez')} <b>${F(LAST.tot||0)}</b> ${t('par')} ${n.map(x=>x[0]).join(' ou ')}. ${t('Le restaurant confirme dès qu’il voit l’argent.')}
+   ${n.map(x=>`<div class="paynum"><span>${x[0]} : <b style="white-space:nowrap">${esc(x[1])}</b></span><button onclick="cpNum('${esc(String(x[1]).replace(/\D/g,''))}',this)">${t('Copier')}</button></div>`).join('')}</div>`}
+function cpNum(n,b){try{navigator.clipboard.writeText(n).then(()=>{b.textContent='✓';setTimeout(()=>{b.textContent=t('Copier')},1500)},()=>{})}catch(e){}}
+function liveRetour(){LAST=null;store('trm.last.'+(CODE||'DEMO'),null);sent=false;drawOrder()}
 function statutBox(){const st=LAST&&LAST.st;
-  if(st==='demo')return `<div class="stbox" style="--sc:#7B3FA0"><b>🌐 ${t('Envoyée au restaurant')}</b><div>${t('Exemple : sur une vraie page, la commande arrive directement dans la caisse du restaurant.')}</div></div>`;
+  if(st==='plein')return `<div class="stbox" style="--sc:#C62828"><b>😕 ${esc(LAST.msg||t('Il n’en reste plus assez.'))}</b><div>${t('Changez la quantité ou choisissez un autre plat.')}</div><button class="stretry" onclick="liveRetour()">${t('Modifier ma commande')}</button></div>`;
+  if(st==='demo')return `<div class="stbox" style="--sc:#7B3FA0"><b>🌐 ${t('Envoyée au restaurant')}</b><div>${t('Exemple : sur une vraie page, la commande arrive directement dans la caisse du restaurant.')}</div>${payBox()}</div>`;
   if(st==='accepte'){const n=LAST.n?' n°'+LAST.n:'',liv=LAST.type==='livraison',et=LAST.etat,u=lienSuivi();
     const lien=u&&!['servie','annule'].includes(et)?`<a class="stlink" href="${esc(u)}" target="_blank" rel="noopener">📱 ${t('Suivre ma commande')}</a>`:'';
     if(et==='prete')return `<div class="stbox" style="--sc:#1F9D5B"><b>✅ ${t('Votre commande')}${n} ${t('est prête !')}</b><div>${liv?t('Le livreur part bientôt avec votre commande.'):LAST.type==='emporter'?t('Venez la récupérer au restaurant.'):t('Elle arrive.')}</div>${lien}</div>`;
@@ -422,7 +467,7 @@ function statutBox(){const st=LAST&&LAST.st;
     return `<div class="stbox" style="--sc:#E07B0E"><b>✅ ${t('Commande confirmée !')}${n}</b><div>🔥 ${et==='cuisine'?t('En préparation… Cette page vous prévient quand c\'est prêt.'):t('Le restaurant prépare votre commande.')}</div>${lien}</div>`}
   if(st==='refuse')return `<div class="stbox" style="--sc:#C62828"><b>❌ ${t('Le restaurant ne peut pas prendre la commande pour le moment.')}</b><div>${t('Écrivez-lui sur WhatsApp pour en savoir plus.')}</div></div>`;
   if(st==='whatsapp')return `<div class="stbox" style="--sc:#C62828"><b>⚠️ ${t('La commande n\'est pas arrivée au restaurant.')}</b><div>${waOk()?t('Vérifiez internet et réessayez, ou envoyez-la par WhatsApp.'):t('Vérifiez internet et réessayez.')}</div><button class="stretry" onclick="sent=false;envoyer()">${t('Réessayer')}</button></div>`;
-  if(st==='nouveau'||st==='envoi')return `<div class="stbox" style="--sc:#E07B0E"><b>⏳ ${t('Envoyée au restaurant')}</b><div>${t('En attente de confirmation… Cette page se met à jour toute seule.')}</div></div>`;
+  if(st==='nouveau'||st==='envoi')return `<div class="stbox" style="--sc:#E07B0E"><b>⏳ ${t('Envoyée au restaurant')}</b><div>${t('En attente de confirmation… Cette page se met à jour toute seule.')}</div>${payBox()}</div>`;
   return `<b>${t('Commande envoyée ? Le restaurant va vous confirmer sur WhatsApp.')}</b>`}
 
 boot();

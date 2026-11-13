@@ -96,6 +96,24 @@ main{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;flex-directio
 .ticcols{display:flex;gap:12px;flex-wrap:wrap}
 .ticcol{width:40px;height:40px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1.5px var(--line);cursor:pointer;padding:0}
 .ticcol.on{box-shadow:0 0 0 3px var(--ink)}
+/* Live TikTok */
+.livecard{border:2px solid #E5252A!important}
+.btn.livebtn{background:#E5252A;color:#fff;font-size:18px;min-height:58px}
+.liveon{background:#E5252A;color:#fff;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.liveon .t{font-weight:800;font-size:17px;display:flex;align-items:center;gap:10px}
+.liveon .t i{width:11px;height:11px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.35);flex:none}
+.liveon .k{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.liveon .k div{background:rgba(255,255,255,.16);border-radius:10px;padding:8px 10px;font-weight:700;font-size:14px}
+.liveon .k b{display:block;font-size:22px}
+.liveon .lvit{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:15px}
+.liveon .btn{background:#fff;color:#B3161B}
+.lvrow{display:grid;grid-template-columns:1fr 84px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.lvrow:first-child{border-top:0}
+.lvrow label{display:flex;gap:10px;align-items:center;font-weight:700;min-width:0}
+.lvrow input[type=checkbox],.lvpay input{width:22px;height:22px;flex:none}
+.lvrow input[type=number]{width:100%;text-align:center;font-weight:800;padding:10px 6px}
+.lvpay{display:flex;gap:10px;align-items:center;font-weight:700}
+.tag.t-live{background:#E5252A;color:#fff}
 .btn{border:0;border-radius:12px;padding:13px 16px;font-weight:700;font-size:16px;cursor:pointer;background:var(--bissap);color:var(--on-accent);min-height:48px}
 .btn.alt{background:var(--bissap-soft);color:var(--bissap)}
 .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
@@ -569,18 +587,19 @@ async function fetchWeb(){if(!webVoit())return;
 function webTot(d){return (d.items||[]).reduce((a,i)=>a+i.prix*i.q,0)+(+d.frais||0)}
 function webOu(d){return d.mode==='livraison'?'🛵 Livraison'+(d.zone?' · '+d.zone:''):d.mode==='emporter'?'🥡 À emporter':'🍽️ Sur place'}
 function annonceWeb(w){const d=w.data||{};const resa=d.mode==='place'&&!(d.items||[]).length;
-  bandeau(`<div><div class="big">🌐 ${resa?'Réservation en ligne':'Commande en ligne'}</div><div class="sm">${esc(d.nom||'')} · ${esc(webOu(d))}${resa?'':' · '+F(webTot(d))}</div></div>`,'#7B3FA0');
+  bandeau(`<div><div class="big">${d.live?'🔴 Commande du live':'🌐 '+(resa?'Réservation en ligne':'Commande en ligne')}</div><div class="sm">${esc(d.nom||'')} · ${esc(webOu(d))}${resa?'':' · '+F(webTot(d))}</div></div>`,'#7B3FA0');
   if(voixOn)setTimeout(()=>parler(resa?'Nouvelle réservation en ligne':'Nouvelle commande en ligne. '+(d.mode==='livraison'?'Livraison':d.mode==='emporter'?'À emporter':'Sur place')),700)}
 function vWeb(){if(!webVoit()||!WEB.length)return '';
   return `<div class="webhead">🌐 ${t('En ligne')} · ${t('à confirmer')} (${WEB.length})</div><div class="olist">${WEB.map(w=>{const d=w.data||{},I=d.items||[],resa=d.mode==='place'&&!I.length;
    const fd=x=>x?x.split('-').reverse().join('/'):'';
    return `<article class="order s-web">
-    <div class="row between"><span class="row" style="gap:10px"><span class="ostat" style="--oc:#7B3FA0">🌐 ${resa?'Réservation':'En ligne'}</span><span class="tag t-neutre">${esc(webOu(d))}</span></span><span class="muted">${new Date(w.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
+    <div class="row between"><span class="row" style="gap:10px"><span class="ostat" style="--oc:#7B3FA0">🌐 ${resa?'Réservation':'En ligne'}</span>${d.live?`<span class="tag t-live">🔴 Live${d.tiktok?' · '+esc(String(d.tiktok).slice(0,40)):''}</span>`:''}<span class="tag t-neutre">${esc(webOu(d))}</span></span><span class="muted">${new Date(w.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
     <div><b>${esc(d.nom||'')}</b> ${esc(d.tel||'')}</div>
     ${d.mode==='livraison'?`<div>📍 ${esc(d.adr||'')}${geoOf(d.geo).geo?` · <a href="${geoUrl(geoOf(d.geo))}" target="_blank" rel="noopener"><b>position envoyée ✓</b></a>`:''}</div>`:''}
     ${d.mode==='place'?`<div>📅 ${fd(d.date)} ${esc(d.heure||'')} · ${+d.pers||1} pers.</div>`:d.heure?`<div>🕐 ${esc(d.heure)}</div>`:`<div class="muted">🕐 ${t('Dès que possible')}</div>`}
     ${I.length?`<div>${I.map(i=>i.q+' × '+esc(i.nom)).join(', ')}${d.frais?' + '+t('Livraison').toLowerCase()+' '+F(d.frais):''}</div>`:''}
     ${d.note?`<div><b>Note :</b> ${esc(d.note)}</div>`:''}
+    ${d.live&&d.paie&&I.length?`<div style="background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:8px 10px;font-weight:700">💳 ${t('Le client paie avant')} : ${t('vérifiez')} ${F(webTot(d))} ${t('sur votre Wave / OM avant de confirmer.')}</div>`:''}
     <div class="row between"><b style="font-size:20px">${I.length?F(webTot(d)):''}</b>
      <div class="row"><button class="btn sm ghost" onclick="webRefuser('${w.id}')">❌ ${t('Refuser')}</button>${d.tel?`<button class="btn sm alt" onclick="openWA('${esc(d.tel)}','Bonjour ${esc((d.nom||'').replace(/'/g,' '))}, ')">WhatsApp</button>`:''}<button class="btn sm" style="background:#7B3FA0" onclick="webConfirmer('${w.id}')">✅ ${resa?t('Confirmer'):t('Confirmer')+' → '+t('Cuisine')}</button></div></div>
    </article>`}).join('')}</div>`}
@@ -592,7 +611,7 @@ async function webConfirmer(id){const w=WEB.find(x=>x.id===id);if(!w)return;cons
       return{pid:i.pid,nom:p?(i.t?p.nom+' ('+i.t+')':p.nom):i.nom,prix:tl?+tl.p||0:+i.prix||0,q:+i.q||1,...(i.t?{t:i.t}:{})}});
     const notes=[d.heure?'Heure : '+d.heure:'',d.note||''].filter(Boolean).join(' · ');
     const typ=d.mode==='livraison'?'livraison':d.mode==='emporter'?'emporter':'place';
-    const o={id:uid(),n,date:new Date().toISOString(),type:typ,table:'',client:{nom:d.nom||'',tel:d.tel||'',quartier:[d.zone,d.adr].filter(Boolean).join(' · '),...geoOf(d.geo)},frais:typ==='livraison'?+d.frais||0:0,items,note:notes,statut:items.some(enCuis)?'cuisine':'prete',paye:false,par:'En ligne',parId:'web',web:true,webId:id,tk:tkGen()};
+    const o={id:uid(),n,date:new Date().toISOString(),type:typ,table:'',client:{nom:d.nom||'',tel:d.tel||'',quartier:[d.zone,d.adr].filter(Boolean).join(' · '),...geoOf(d.geo)},frais:typ==='livraison'?+d.frais||0:0,items,note:notes,statut:items.some(enCuis)?'cuisine':'prete',paye:false,par:'En ligne',parId:'web',web:true,webId:id,tk:tkGen(),...(d.live?{live:true,...(d.tiktok?{tiktok:String(d.tiktok).slice(0,40)}:{})}:{})};
     if(!await webMaj(id,'accepte',n))return;
     S.orders.push(o);save()}
   else if(!await webMaj(id,'accepte'))return;
@@ -1183,12 +1202,12 @@ function vCommandes(){
   let L=(cmdF==='encours'?all.filter(o=>etat(o)!=='fini'):cmdF in EC?all.filter(o=>etat(o)===cmdF):all).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)||b.n-a.n);
   const TY={place:'Sur place',emporter:'À emporter',livraison:'Livraison'};
   const ST={cuisine:['t-cuisine','En cuisine'],prete:['t-prete','Prête'],servie:['t-servie','Servie']};
-  return `<div class="chips">${isP()&&has('cuisine')?`<button class="chip" onclick="go('cuisine')">${t('Écran cuisine')}</button>`:''}${ecrOk()?`<button class="chip" onclick="ecrSet(true)">📺 ${t('Écran clients')}</button>`:''}<button class="chip ${cmdF==='encours'?'on':''}" onclick="cmdF='encours';render()">${t('En cours')}</button><button class="chip ${cmdF==='tout'?'on':''}" onclick="cmdF='tout';render()">${t('Toutes aujourd\'hui')} (${all.length})</button></div>
+  return `${liveOn()&&webVoit()?liveBox():''}<div class="chips">${isP()&&has('cuisine')?`<button class="chip" onclick="go('cuisine')">${t('Écran cuisine')}</button>`:''}${ecrOk()?`<button class="chip" onclick="ecrSet(true)">📺 ${t('Écran clients')}</button>`:''}<button class="chip ${cmdF==='encours'?'on':''}" onclick="cmdF='encours';render()">${t('En cours')}</button><button class="chip ${cmdF==='tout'?'on':''}" onclick="cmdF='tout';render()">${t('Toutes aujourd\'hui')} (${all.length})</button></div>
   <div class="oleg">${Object.entries(EC).map(([k,[c,l]])=>`<button style="--oc:${c}" class="${cmdF===k||cmdF==='tout'||(cmdF==='encours'&&k!=='fini')?'':'dim'}" onclick="cmdF=cmdF==='${k}'?'tout':'${k}';render()">${l} · ${nb[k]}</button>`).join('')}</div>
   ${vLivArgent()}${vWeb()}
   <div class="olist">${L.map(o=>{const s=ST[o.statut];const e=etat(o);const isNew=Date.now()-new Date(o.date).getTime()<120000&&e==='cuisine';const nx=o.statut==='cuisine'?['prete','Prête']:o.statut==='prete'?['servie',o.type==='livraison'?'Livrée':'Servie']:null;
    return `<article class="order s-${e} ${isNew?'new':''}">
-    <div class="row between"><span class="row" style="gap:10px"><span class="num">n°${o.n}</span><span class="ostat">${EC[e][1]}</span>${isNew?'<span class="tag t-du">NOUVEAU</span>':''}${o.web?'<span class="tag" style="background:#7B3FA0;color:#fff">🌐 En ligne</span>':''}</span><span class="muted">${new Date(o.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
+    <div class="row between"><span class="row" style="gap:10px"><span class="num">n°${o.n}</span><span class="ostat">${EC[e][1]}</span>${isNew?'<span class="tag t-du">NOUVEAU</span>':''}${o.web?'<span class="tag" style="background:#7B3FA0;color:#fff">🌐 En ligne</span>':''}${o.live?`<span class="tag t-live">🔴 Live${o.tiktok?' · '+esc(o.tiktok):''}</span>`:''}</span><span class="muted">${new Date(o.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
     <div class="row"><span class="tag t-neutre">${t(TY[o.type])}${o.table?' · '+t('Table')+' '+esc(o.table):''}</span>${o.statut==='servie'?`<span class="tag t-servie">${t(o.type==='livraison'?'Livrée':'Servie')}</span>`:''}${o.paye?`<span class="tag t-paye">${o.mode==='credit'?t('Dette'):o.mode==='abonne'?t('Abonnement'):t('Payée')+' · '+mName(o.mode)}</span>`:`<span class="tag t-du">${o.paiements&&o.paiements.length?t('Déjà payé')+' '+F(sum(o.paiements))+' · '+t('Reste')+' '+F(tot(o)-sum(o.paiements)):t('À payer')}</span>`}</div>
     ${o.client&&o.client.nom?`<div><b>${esc(o.client.nom)}</b> ${esc(o.client.tel||'')} ${o.client.quartier?'· '+esc(o.client.quartier):''}</div>`:''}
     ${o.type==='livraison'?livRow(o):''}
@@ -1591,7 +1610,7 @@ async function chgPass(){const p=val('g_pw');if(p.length<6)return toast('6 carac
 /* Ma page client */
 const PAGE_FALLBACK='https://seckappssn-maker.github.io/terangaresto/menu.html';
 function pageBase(){try{if(/github\.io$/i.test(location.hostname))return new URL('menu.html',location.href).href.split('?')[0].split('#')[0]}catch(e){}return PAGE_FALLBACK}
-function pageLink(){if(DEMO)return pageBase()+'?r=DEMO';return AB&&AB.page_code?pageBase()+'?r='+AB.page_code:''}
+function pageLink(){if(DEMO)return pageBase()+'?r=DEMO'+(liveOn()?'&live=1':'');return AB&&AB.page_code?pageBase()+'?r='+AB.page_code:''}
 function pageDefault(){return{actif:false,texte:'',whatsapp:S.set.tel||'',adresse:S.set.adresse||'',horaires:'Tous les jours, 11h – 23h',services:{livraison:true,emporter:true,place:true},zones:[{nom:'Près du restaurant',prix:+S.set.fraisLiv||500}]}}
 let pz=null;
 function vPage(){if(!isP())return'';const P=S.page||pageDefault();if(!pz)pz=(P.zones||[]).map(z=>({...z}));
@@ -1599,6 +1618,7 @@ function vPage(){if(!isP())return'';const P=S.page||pageDefault();if(!pz)pz=(P.z
   const nP=S.plats.filter(p=>p.enLigne!==false).length,nPh=S.plats.filter(p=>p.enLigne!==false&&Array.isArray(p.photos)&&p.photos.some(u=>DEMO||/^https:/.test(u))).length;
   return `<div class="row">${back()}</div><h2>Ma page client</h2>
   <div class="muted">Une page avec votre menu, vos photos et vos prix. Le client choisit, puis la commande vous arrive sur WhatsApp, déjà écrite.</div>
+  ${liveCard()}
   <section class="card">
    <button class="switch ${on?'on':''}" onclick="pageToggle()" aria-pressed="${on}"><span>${on?'Page activée : les clients peuvent commander':'Page désactivée'}</span><span class="knob" aria-hidden="true"></span></button>
    ${!DEMO&&a.st==='grace'?'<div style="color:var(--bad);font-weight:700">Abonnement expiré : la page s\'éteindra dans '+(GRACE+a.left)+' jour(s) si vous ne payez pas.</div>':''}
@@ -1856,6 +1876,49 @@ function ticCard(){const s=S.set,c=ticCol();
    <div class="ticwrap" id="ticPrev">${ticHTML(ticSample())}</div>
    <div class="muted" style="font-size:13px">${t('Sur le papier de la petite imprimante (58 mm), le logo sort en noir et blanc, sans la photo ni la couleur.')}</div>
    <div class="grid2"><button class="btn alt" onclick="ticSave(true);ticMake('_ex','img')">🖼️ ${t('Voir en image')}</button><button class="btn" onclick="ticSave()">${t('Enregistrer')}</button></div></section>`}
+/* ---------- Live TikTok : la page client montre « En direct », les plats du live et les portions qui restent ---------- */
+let liveStopC=false;
+function liveOn(){const L=S.page&&S.page.live;if(!L||!L.actif)return false;const d=new Date(L.debut).getTime();return isFinite(d)&&Date.now()-d<8*3600e3}
+function liveStats(){const L=S.page.live,deb=new Date(L.debut).getTime(),used={};let n=0,tt=0;
+  const add=(pid,q)=>{used[pid]=(used[pid]||0)+(+q||0)};
+  (WEB||[]).forEach(w=>{const d=w.data||{};if(!d.live||new Date(w.created_at).getTime()<deb-60000)return;n++;tt+=webTot(d);(d.items||[]).forEach(i=>add(i.pid,i.q))});
+  S.orders.forEach(o=>{if(!o.live||new Date(o.date).getTime()<deb-60000)return;(o.items||[]).forEach(i=>add(i.pid,i.q));if(!o.annule){n++;tt+=tot(o)}});
+  return{n,tt,used}}
+function liveDur(){const m=Math.max(0,Math.round((Date.now()-new Date(S.page.live.debut).getTime())/60000));return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')}
+function liveBox(){const L=S.page.live,st=liveStats();
+  const it=(L.items||[]).map(x=>{const p=S.plats.find(y=>y.id===x.id);if(!p)return '';const r=Math.max(0,x.max-(st.used[x.id]||0));return `<span>${esc(p.nom)} : <b>${r===0?t('épuisé'):r+' / '+x.max}</b></span>`}).filter(Boolean);
+  return `<section class="liveon"><div class="t"><i></i>${t('LIVE EN COURS')} · ${liveDur()}</div>
+   <div class="k"><div>${t('Commandes du live')}<b>${st.n}</b></div><div>${t('Total')}<b>${F(st.tt)}</b></div></div>
+   <div class="lvit">${it.join('')}</div>
+   ${L.paie?`<div style="font-size:14px">💳 ${t('Les clients paient par Wave / OM avant : vérifiez l’argent avant de confirmer.')}</div>`:''}
+   <div class="grid2"><button class="btn" onclick="liveModal()">${t('Modifier')}</button><button class="btn" onclick="liveStop()">${liveStopC?t('Sûr ? Touchez encore'):t('Fin du live')}</button></div></section>`}
+function liveCard(){if(liveOn())return liveBox();
+  return `<section class="card livecard"><div class="lbl" style="color:#E5252A">🔴 ${t('Live TikTok')}</div>
+   <div class="muted">${t('Vous faites un live ? Touchez ici avant de commencer : votre page client montre « En direct », les plats du live et les portions qui restent.')}</div>
+   <button class="btn livebtn" onclick="liveModal()">🔴 ${t('Je commence un live')}</button>
+   <div class="muted" style="font-size:13px">${t('Si vous ne touchez pas ce bouton, votre page reste comme d’habitude.')}</div></section>`}
+function liveModal(){const P=S.page||pageDefault();if(!P.actif&&!DEMO)return toast(t('Activez d’abord votre page client (le bouton en haut de « Ma page client »)'));
+  const on=liveOn(),L=on?S.page.live:(S.page&&S.page.live)||{},prev={};(L.items||[]).forEach(x=>{prev[x.id]=x.max});
+  const pl=S.plats.filter(p=>p.dispo!==false&&p.enLigne!==false),mm=!!(S.set.wave||S.set.om);
+  modal(`<h2>🔴 ${on?t('Modifier le live'):t('Je commence un live')}</h2><div class="muted">${t('Choisissez les plats du live et combien de portions vous avez.')}</div>
+   <div class="card" style="gap:0">${pl.map(p=>`<div class="lvrow"><label><input type="checkbox" class="lv_c" data-id="${esc(p.id)}" ${prev[p.id]?'checked':''}> ${esc(p.nom)}</label><input type="number" class="lv_n" data-id="${esc(p.id)}" inputmode="numeric" min="1" max="999" value="${prev[p.id]||''}" placeholder="0" aria-label="${t('Portions')} ${esc(p.nom)}" oninput="this.closest('.lvrow').querySelector('.lv_c').checked=+this.value>0"></div>`).join('')||`<div class="muted">${t('Ajoutez d’abord vos plats dans Menu.')}</div>`}</div>
+   ${mm?`<label class="lvpay"><input type="checkbox" id="lv_pay" ${L.paie===false?'':'checked'}> ${t('Paiement Wave / OM avant de préparer (conseillé)')}</label>`:`<div class="muted" style="font-size:13px">${t('Pour que les clients paient avant, mettez votre numéro Wave ou Orange Money dans Réglages.')}</div>`}
+   <div class="muted" style="font-size:14px">${t('Pendant le live, dites : « Pour commander, touchez le lien dans ma bio ! »')}</div>
+   <button class="btn full livebtn" onclick="liveGo()">${on?t('Enregistrer'):'🔴 '+t('Commencer le live')}</button><button class="btn ghost full" onclick="closeM()">${t('Annuler')}</button>`)}
+function liveGo(){const it=[...document.querySelectorAll('.lv_c')].filter(c=>c.checked).map(c=>{const n=[...document.querySelectorAll('.lv_n')].find(x=>x.dataset.id===c.dataset.id);return{id:c.dataset.id,max:Math.max(0,Math.min(999,Math.round(+(n&&n.value)||0)))}});
+  if(!it.length)return toast(t('Choisissez au moins un plat du live'));if(it.some(x=>!x.max))return toast(t('Écrivez combien de portions pour chaque plat choisi'));
+  const pb=document.getElementById('lv_pay'),pay=!!(pb&&pb.checked)&&!!(S.set.wave||S.set.om),on=liveOn();
+  S.page=S.page||pageDefault();S.page.live={actif:true,debut:on?S.page.live.debut:new Date().toISOString(),items:it.slice(0,30),paie:pay};
+  if(DEMO&&!on)liveDemoWeb();
+  save();closeM();render();
+  if(on)toast(t('Live modifié'));else toastAct(t('🔴 Live commencé'),t('Copier le lien'),()=>copyTxt(pageLink()))}
+function liveStop(){if(!liveStopC){liveStopC=true;softRender();toast(t('Touchez encore pour terminer le live'));setTimeout(()=>{if(liveStopC){liveStopC=false;softRender()}},6000);return}
+  liveStopC=false;S.page.live={...S.page.live,actif:false,fin:new Date().toISOString()};save();render();toast(t('Live terminé : votre page redevient normale'))}
+/* Démo : deux commandes du live arrivent pour montrer comment ça marche */
+function liveDemoWeb(){const L=S.page.live,a=S.plats.find(p=>p.id===L.items[0].id),b=L.items[1]?S.plats.find(p=>p.id===L.items[1].id):a;if(!a)return;const now=Date.now();
+  WEB=(WEB||[]).concat([{id:'live-demo-1',created_at:new Date(now+1000).toISOString(),statut:'nouveau',data:{live:true,tiktok:'@awa221',paie:L.paie,mode:'emporter',nom:'Awa (exemple)',tel:'770000002',heure:'',note:'',items:[{pid:a.id,nom:a.nom,prix:a.prix,q:2}]}},
+    {id:'live-demo-2',created_at:new Date(now+2000).toISOString(),statut:'nouveau',data:{live:true,tiktok:'@moussa.dkr',paie:L.paie,mode:'livraison',nom:'Moussa (exemple)',tel:'770000006',zone:'',adr:'Parcelles U17',frais:500,heure:'',note:'',items:[{pid:b.id,nom:b.nom,prix:b.prix,q:1}]}}]);
+  if(webSeen)WEB.forEach(w=>webSeen.add(w.id))}
 function vitPage(){const P=pageCollect();S.page=P;P.photos=Array.isArray(P.photos)?P.photos:[];return P}
 async function vitPick(inp,kind){const f=inp.files&&inp.files[0];inp.value='';if(!f||vitBusy)return;const P=vitPage();
   if(kind==='photo'&&P.photos.length>=3)return toast('3 photos maximum');
