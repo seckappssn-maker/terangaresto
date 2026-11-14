@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr">
 <head><script>/* terangaapps.com : passe en https dès que le certificat est prêt */(function(){try{var l=location;if(l.protocol==="http:"&&/(^|\.)terangaapps\.com$/.test(l.hostname)){var u="https://"+l.host+l.pathname+l.search+l.hash;fetch("https://"+l.host+"/CNAME",{mode:"no-cors",cache:"no-store"}).then(function(){l.replace(u)}).catch(function(){})}}catch(e){}})();</script>
-<meta charset="utf-8">
+<meta charset="utf-8"><script>/* Essai gratuit : 1 mois pour toute inscription jusqu'au 31/01/2027 (offre de lancement), puis 14 jours. Même règle sur le serveur (Supabase seck_essai_fin). */window.ESSAI_LANCEMENT=Date.now()<Date.UTC(2027,1,1);window.ESSAI_TXT=ESSAI_LANCEMENT?'1 mois gratuit':'14 jours gratuits';window.ESSAI_TXT_LONG=ESSAI_LANCEMENT?"1 mois d'essai gratuit":"14 jours d'essai gratuit";window.ESSAI_IT=ESSAI_LANCEMENT?'1 mese gratis':'14 giorni gratis';window.ESSAI_JOURS=ESSAI_LANCEMENT?30:14;</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Caisse, commandes, livraisons, dettes, abonnés et dépenses pour les restaurants au Sénégal.">
 <meta property="og:type" content="website">
@@ -623,7 +623,7 @@ async function webRefuser(id){const w=WEB.find(x=>x.id===id);if(!w)return;if(!co
   if(d.tel)toastAct('Commande refusée','Prévenir sur WhatsApp',()=>openWA(d.tel,`Bonjour ${d.nom||''}, désolé, nous ne pouvons pas prendre votre commande pour le moment. ${S.set.nom||''}`))}
 function softRender(){const a=document.activeElement;if(MODE!=='app')return;if(document.getElementById('ovWrap').innerHTML||(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))){dirtyRender=true;return}render()}
 async function fetchAb(){if(DEMO||!SB||!USER)return;try{let r=await SB.from('resto_abonnements').select('*').eq('user_id',USER.id).maybeSingle();
-  if(!r.error&&!r.data){const e=new Date(Date.now()+7*864e5);
+  if(!r.error&&!r.data){const e=new Date();if(ESSAI_LANCEMENT)e.setMonth(e.getMonth()+1);else e.setDate(e.getDate()+14);
     await SB.from('resto_abonnements').insert({user_id:USER.id,phone:(USER.email||'').split('@')[0],trial_end:e.getFullYear()+'-'+pad(e.getMonth()+1)+'-'+pad(e.getDate())});
     r=await SB.from('resto_abonnements').select('*').eq('user_id',USER.id).maybeSingle()}
   if(r.error||!r.data)return;AB=r.data;S.set.formule=AB.formule||'premium';writeCache()}catch(e){}}
@@ -1965,7 +1965,7 @@ function vAccount(){const su=authMode==='signup';
     ${su?'<label class="f">Nom du restaurant<input id="au_nom" autocomplete="organization" placeholder="Ex : Chez Awa"></label>':''}
     <label class="f">Numéro de téléphone du patron<input id="au_tel" inputmode="tel" autocomplete="username" placeholder="77 000 00 00"></label>
     <label class="f">Mot de passe<input id="au_pw" type="password" autocomplete="${su?'new-password':'current-password'}" placeholder="6 caractères minimum"></label>
-    ${su?'<label class="f">Répéter le mot de passe<input id="au_pw2" type="password" autocomplete="new-password"></label><div class="muted" style="font-size:14px">7 jours gratuits. Notez bien le mot de passe : il sert pour connecter chaque téléphone du restaurant.</div>':''}
+    ${su?'<label class="f">Répéter le mot de passe<input id="au_pw2" type="password" autocomplete="new-password"></label><div class="muted" style="font-size:14px">'+ESSAI_TXT+'. Notez bien le mot de passe : il sert pour connecter chaque téléphone du restaurant.</div>':''}
     <button class="btn full" type="submit" id="au_btn">${su?'Créer le compte':'Se connecter'}</button>
     <div id="au_msg" style="color:var(--bad);font-weight:600"></div></form>
    <button class="btn ghost full" onclick="startDemo()">Voir la démo (sans compte)</button></section>`}
