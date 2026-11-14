@@ -7,8 +7,8 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Teranga Resto – l'application des restaurants">
 <meta property="og:description" content="Caisse, commandes, livraisons, Wave et Orange Money, dettes, abonnés, événements, dépenses.">
-<meta property="og:url" content="https://seckappssn-maker.github.io/terangaresto/">
-<meta property="og:image" content="https://seckappssn-maker.github.io/terangaresto/copertina.png">
+<meta property="og:url" content="https://resto.terangaapps.com/">
+<meta property="og:image" content="https://resto.terangaapps.com/copertina.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
@@ -945,7 +945,7 @@ function mapsOf(v){v=String(v||'').trim();if(!v)return{};const m=v.match(/^(-?\d
   const u=v.match(/https:\/\/\S+/);return u?{maps:u[0].slice(0,300)}:{}}
 function geoUrl(c){if(!c)return '';const g=geoOf(c.geo);if(g.geo)return 'https://maps.google.com/?q='+g.geo.lat+','+g.geo.lng;return c.maps&&/^https:\/\//.test(c.maps)?c.maps:''}
 /* ---------- Espace livreur (numéro + code) ---------- */
-function livBase(){try{if(/github\.io$/i.test(location.hostname))return new URL('livreur.html',location.href).href.split('?')[0].split('#')[0]}catch(e){}return 'https://seckappssn-maker.github.io/terangaresto/livreur.html'}
+function livBase(){try{if(/(github\.io|terangaapps\.com)$/i.test(location.hostname))return new URL('livreur.html',location.href).href.split('?')[0].split('#')[0]}catch(e){}return 'https://resto.terangaapps.com/livreur.html'}
 function livLink(){if(DEMO)return livBase()+'?demo=1';return AB&&AB.page_code?livBase()+'?r='+AB.page_code:''}
 function livCodeNew(){let c;do{c=String(1000+Math.floor(Math.random()*9000))}while(S.staff.some(x=>x.lcode===c));return c}
 const livAccesOn=s=>!!(s&&s.role==='livreur'&&s.lacces&&s.lcode&&has('livreurs'));
@@ -992,7 +992,7 @@ function livVerse(ids){const L=ids.map(id=>S.orders.find(o=>o.id===id)).filter(o
     o.paye=true;o.mode='especes';o.payeLe=now;o.recu=a});
   save();render();toast(`${F(m)} reçu de ${nom} ✓`)}
 /* ---------- Société de livraison (Teranga Livraison) ---------- */
-const TL_SITE='https://seckappssn-maker.github.io/teranga-livraison/';let TLS={};
+const TL_SITE='https://livraison.terangaapps.com/';let TLS={};
 const TLST={nouvelle:['En attente d\'un livreur','t-neutre'],prise:['Le livreur arrive','t-neutre'],recuperee:['En route','t-neutre'],livree:['Livrée ✅','t-paye'],annulee:['Annulée par la société','t-du']};
 function tlCodeOf(v){v=String(v||'').trim();const m=v.match(/[?&]c=([^&#\s]+)/);if(m)v=decodeURIComponent(m[1]);return v.toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40)}
 function tlNom(){return S.set.livNom||S.set.livCode||'la société'}
@@ -1103,7 +1103,7 @@ function tkGen(){try{const a=new Uint8Array(12);crypto.getRandomValues(a);return
 /* Montré tout seul pour « À emporter » et « Sur place » sans table (le serveur apporte les plats aux tables) */
 const numAuto=o=>o.type==='emporter'||(o.type==='place'&&!o.table);
 function apresPaie(o){if(numApres&&o&&numApres===o.id){numApres=null;setTimeout(()=>numModal(o.id),60)}}
-function suiviURL(o){let b='https://seckappssn-maker.github.io/terangaresto/suivi.html';try{if(/github\.io$/i.test(location.hostname))b=new URL('suivi.html',location.href).href.split('?')[0].split('#')[0]}catch(e){}
+function suiviURL(o){let b='https://resto.terangaapps.com/suivi.html';try{if(/(github\.io|terangaapps\.com)$/i.test(location.hostname))b=new URL('suivi.html',location.href).href.split('?')[0].split('#')[0]}catch(e){}
   if(DEMO)return b+'?demo=1&n='+o.n+'&r='+encodeURIComponent(S.set.nom||'Teranga Resto');return b+'?i='+encodeURIComponent(o.id)+'&k='+o.tk}
 function qrSvg(txt){try{const q=qrcode(0,'M');q.addData(txt);q.make();return q.createSvgTag({cellSize:4,margin:0,scalable:true})}catch(e){return `<span class="muted" style="font-size:13px">${t('QR indisponible (pas de connexion)')}</span>`}}
 function numModal(id){const o=S.orders.find(x=>x.id===id);if(!o)return;if(!o.tk){o.tk=tkGen();save()}
@@ -1608,8 +1608,8 @@ function abCard(){const a=abState(),f=FORMULES[S.set.formule]||FORMULES.premium;
    <button class="btn ghost" style="color:var(--bad)" onclick="accountLogout()">Déconnecter ce téléphone</button></section>`}
 async function chgPass(){const p=val('g_pw');if(p.length<6)return toast('6 caractères minimum');try{const r=await SB.auth.updateUser({password:p});if(r.error)throw r.error;toast('Mot de passe changé');const e=document.getElementById('g_pw');if(e)e.value=''}catch(e){toast(/fetch|network/i.test(String(e.message))?'Pas de connexion internet':String(e.message))}}
 /* Ma page client */
-const PAGE_FALLBACK='https://seckappssn-maker.github.io/terangaresto/menu.html';
-function pageBase(){try{if(/github\.io$/i.test(location.hostname))return new URL('menu.html',location.href).href.split('?')[0].split('#')[0]}catch(e){}return PAGE_FALLBACK}
+const PAGE_FALLBACK='https://resto.terangaapps.com/menu.html';
+function pageBase(){try{if(/(github\.io|terangaapps\.com)$/i.test(location.hostname))return new URL('menu.html',location.href).href.split('?')[0].split('#')[0]}catch(e){}return PAGE_FALLBACK}
 function pageLink(){if(DEMO)return pageBase()+'?r=DEMO'+(liveOn()?'&live=1':'');return AB&&AB.page_code?pageBase()+'?r='+AB.page_code:''}
 function pageDefault(){return{actif:false,texte:'',whatsapp:S.set.tel||'',adresse:S.set.adresse||'',horaires:'Tous les jours, 11h – 23h',services:{livraison:true,emporter:true,place:true},zones:[{nom:'Près du restaurant',prix:+S.set.fraisLiv||500}]}}
 let pz=null;
