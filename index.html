@@ -114,6 +114,19 @@ main{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;flex-directio
 .lvrow input[type=number]{width:100%;text-align:center;font-weight:800;padding:10px 6px}
 .lvpay{display:flex;gap:10px;align-items:center;font-weight:700}
 .tag.t-live{background:#E5252A;color:#fff}
+/* Tables : boutons libres / occupées, avertissement */
+.tcol{display:flex;flex-direction:column;gap:8px}
+.tblgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:8px}
+.tblbtn{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;min-height:58px;font-family:var(--f-body)}
+.tblbtn b{font:800 20px/1.1 var(--f-display);overflow-wrap:anywhere;text-align:center}
+.tblbtn small{font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap}
+.tblbtn.occ{background:var(--warn-soft);border-color:var(--warn)}.tblbtn.occ b,.tblbtn.occ small{color:var(--warn)}
+.tblbtn.on{outline:3px solid var(--ink);outline-offset:1px}
+.tocc{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px}
+.tchip{border:1.5px solid var(--warn);color:var(--warn);background:var(--warn-soft);border-radius:99px;padding:5px 13px;font:800 15px var(--f-body);cursor:pointer;min-height:36px}
+.tchip.on{background:var(--warn);color:#fff}
+.twarn{background:var(--warn-soft);border:1.5px solid var(--warn);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.twarn b{color:var(--warn);font-size:16px}
 .btn{border:0;border-radius:12px;padding:13px 16px;font-weight:700;font-size:16px;cursor:pointer;background:var(--bissap);color:var(--on-accent);min-height:48px}
 .btn.alt{background:var(--bissap-soft);color:var(--bissap)}
 .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
@@ -445,7 +458,7 @@ function seed(){
     {id:uid(),n:4,date:new Date(now.getTime()-12*60000).toISOString(),type:'place',table:'5',client:{},frais:0,items:[it(3,2),it(18,2)],note:'',statut:'cuisine',paye:false}];
   return {
     exemple:true,
-    set:{nom:'Restaurant Teranga',tel:'77 000 00 00',adresse:'Dakar',wave:'77 000 00 00',om:'77 000 00 00',fraisLiv:500,lang:'fr',formule:'premium',pinPatron:'0000'},
+    set:{nom:'Restaurant Teranga',tel:'77 000 00 00',adresse:'Dakar',wave:'77 000 00 00',om:'77 000 00 00',fraisLiv:500,tables:10,lang:'fr',formule:'premium',pinPatron:'0000'},
     livExt:[{nom:'Modou moto (exemple)',tel:'770000007'}],
     plats,orders,
     depenses:[
@@ -839,7 +852,7 @@ function vCaisse(){
     <button class="btn sm ghost" onclick="cart=newCart();go('commandes')">${t('Annuler l\'ajout')}</button></div>`:`
     <div class="row between"><h2 style="font-size:20px">${t('Nouvelle commande')}</h2>${lines.length?`<button class="btn sm ghost" onclick="cart=newCart();render()">${t('Vider')}</button>`:''}</div>
     <div class="typebar">${[['place','🍽️ Sur place'],['emporter','🥡 À emporter'],['livraison','🛵 Livraison']].map(([k,l])=>`<button class="chip ${cart.type===k?'on':''}" onclick="cart.type='${k}';render()">${l.split(' ')[0]} ${t(l.slice(l.indexOf(' ')+1))}</button>`).join('')}</div>
-    ${cart.type==='place'?`<div class="row"><label class="f">${t('Table')} n°<input id="c_table" inputmode="numeric" value="${esc(cart.table)}" oninput="cart.table=this.value"></label></div>`:''}
+    ${cart.type==='place'?`<div id="tblZone" class="tcol">${tblZoneHTML()}</div>`:''}
     ${cart.type==='emporter'?`<div class="row"><label class="f">${t('Nom (facultatif)')}<input id="c_nom" placeholder="Pour l'appeler quand c'est prêt" value="${esc(cart.nom)}" oninput="cart.nom=this.value"></label></div>`:''}
     ${cart.type==='livraison'?`<div class="row">
        <label class="f">${t('Client')}<input id="c_nom" value="${esc(cart.nom)}" oninput="cart.nom=this.value"></label>
@@ -871,6 +884,7 @@ function decP(id){cart.items[id]=Math.max(0,(cart.items[id]||0)-1);if(!cart.item
 function valider(payer){
   const items=Object.entries(cart.items).filter(([,q])=>q>0).map(([k,q])=>{const c=cItem(k);return c?{pid:c.p.id,nom:c.nom,prix:c.prix,q,...(c.tl?{t:c.tl}:{})}:null}).filter(Boolean);
   if(!items.length){toast('Ajoutez au moins un plat');return}
+  if(!cart.addTo&&cart.type==='place'){const x=tblOccOf(cart.table);if(x&&cart.tableOk!==tblKey(cart.table)){tblAsk(x,payer);return}}
   if(cart.addTo){const o=S.orders.find(x=>x.id===cart.addTo);
     if(!o||o.paye||o.annule){toast('Cette commande est déjà payée');cart=newCart();render();return}
     items.forEach(it=>{const ex=o.items.find(i=>i.pid===it.pid&&i.prix===it.prix&&i.nom===it.nom);if(ex)ex.q+=it.q;else o.items.push({...it})});
@@ -1582,6 +1596,7 @@ function vReglages(){const s=S.set;
    <div class="muted" style="font-size:13px">${t('Dans Wave ou Max it, ouvrez « Mon code QR », faites une capture d’écran et ajoutez-la ici. Le QR s’affiche quand vous touchez Wave ou OM à la caisse, et chez le livreur.')}</div>
    <label class="f">${t('Frais de livraison')} par défaut (F)<input id="g_f" inputmode="numeric" value="${esc(s.fraisLiv)}"></label>
    <button class="btn" onclick="Object.assign(S.set,{nom:val('g_nom'),tel:val('g_tel'),adresse:val('g_adr'),wave:val('g_w'),om:val('g_o'),fraisLiv:+val('g_f')||0});save();render();toast('Enregistré')">${t('Enregistrer')}</button></section>
+  ${tbCard()}
   ${ticCard()}
   ${tlCard()}
   ${DEMO?'':abCard()}
@@ -1919,6 +1934,44 @@ function liveDemoWeb(){const L=S.page.live,a=S.plats.find(p=>p.id===L.items[0].i
   WEB=(WEB||[]).concat([{id:'live-demo-1',created_at:new Date(now+1000).toISOString(),statut:'nouveau',data:{live:true,tiktok:'@awa221',paie:L.paie,mode:'emporter',nom:'Awa (exemple)',tel:'770000002',heure:'',note:'',items:[{pid:a.id,nom:a.nom,prix:a.prix,q:2}]}},
     {id:'live-demo-2',created_at:new Date(now+2000).toISOString(),statut:'nouveau',data:{live:true,tiktok:'@moussa.dkr',paie:L.paie,mode:'livraison',nom:'Moussa (exemple)',tel:'770000006',zone:'',adr:'Parcelles U17',frais:500,heure:'',note:'',items:[{pid:b.id,nom:b.nom,prix:b.prix,q:1}]}}]);
   if(webSeen)WEB.forEach(w=>webSeen.add(w.id))}
+/* ---------- Tables : celles du restaurant (Réglages) ; une table avec une commande pas encore payée est occupée ---------- */
+const tblKey=v=>String(v||'').trim().toLowerCase().replace(/^table\s*/,'');
+function tablesList(){const n=Math.max(0,Math.min(99,Math.round(+S.set.tables||0))),L=[];for(let i=1;i<=n;i++)L.push(String(i));
+  String(S.set.tablesX||'').split(',').map(x=>x.trim().slice(0,20)).filter(Boolean).slice(0,30).forEach(x=>{if(!L.some(y=>tblKey(y)===tblKey(x)))L.push(x)});return L}
+function tablesOcc(){const m=new Map(),now=Date.now();
+  S.orders.forEach(o=>{if(o.type!=='place'||o.paye||o.annule||!tblKey(o.table))return;if(now-new Date(o.date).getTime()>18*3600e3)return;
+    const k=tblKey(o.table);if(!m.has(k))m.set(k,{t:String(o.table).trim(),L:[]});m.get(k).L.push(o)});
+  return [...m.values()].sort((a,b)=>a.t.localeCompare(b.t,'fr',{numeric:true}))}
+function tblOccOf(v){const k=tblKey(v);return k?tablesOcc().find(x=>tblKey(x.t)===k)||null:null}
+function tblWarnHTML(grid){if(cart.type!=='place'||cart.addTo)return '';const T=tablesOcc(),x=tblOccOf(cart.table),ok=x&&cart.tableOk===tblKey(cart.table);
+  return `${!grid&&T.length?`<div class="tocc"><span class="muted">${t('Tables occupées')} :</span>${T.map((z,i)=>`<button class="tchip ${x&&tblKey(x.t)===tblKey(z.t)?'on':''}" onclick="tblPickO(${i})">${esc(z.t)}</button>`).join('')}</div>`:''}
+   ${x&&!ok?`<div class="twarn" role="alert"><b>⚠️ ${t('Table')} ${esc(x.t)} ${t('occupée')}</b><div>${x.L.map(o=>`n°${o.n} · ${F(tot(o))} · ${t('pas encore payée')}`).join('<br>')}</div>
+     <div class="row" style="flex-wrap:wrap;gap:8px">${x.L.map(o=>`<button class="btn sm ok" onclick="tblAdd('${o.id}')">➕ ${t('Ajouter à la')} n°${o.n}</button>`).join('')}<button class="btn sm ghost" onclick="tblNew()">${t('Nouvelle commande quand même')}</button></div></div>`
+   :ok?`<div class="muted" style="font-size:13px">✓ ${t('Nouvelle commande à la table')} ${esc(x.t)}</div>`:''}`}
+function tblZoneHTML(){const L=tablesList();
+  if(!L.length)return `<div class="row"><label class="f">${t('Table')} n°<input id="c_table" inputmode="numeric" value="${esc(cart.table)}" oninput="cart.table=this.value;cart.tableOk='';tblUpd()"></label></div><div id="tblWarn" class="tcol">${tblWarnHTML(false)}</div>`;
+  const occ=new Map(tablesOcc().map(x=>[tblKey(x.t),x]));
+  return `<div class="lbl">${t('Table')}</div><div class="tblgrid">${L.map((n,i)=>{const x=occ.get(tblKey(n)),on=!!cart.table&&tblKey(cart.table)===tblKey(n);
+     return `<button class="tblbtn ${x?'occ':''} ${on?'on':''}" onclick="tblPickI(${i})" aria-pressed="${on}"><b>${esc(n)}</b><small>${x?'n°'+x.L[0].n+(x.L.length>1?'+':'')+' · '+F(x.L.reduce((a,o)=>a+tot(o),0)):t('libre')}</small></button>`}).join('')}</div>
+   <div id="tblWarn" class="tcol">${tblWarnHTML(true)}</div>`}
+function tblUpd(){if(tablesList().length){const z=document.getElementById('tblZone');if(z)z.innerHTML=tblZoneHTML();return}const e=document.getElementById('tblWarn');if(e)e.innerHTML=tblWarnHTML(false)}
+function tblSet(v){cart.table=v;cart.tableOk='';const i=document.getElementById('c_table');if(i)i.value=v;tblUpd()}
+function tblPickI(i){const v=tablesList()[i];if(v==null)return;tblSet(cart.table&&tblKey(cart.table)===tblKey(v)?'':v)}
+function tblPickO(i){const z=tablesOcc()[i];if(z)tblSet(z.t)}
+function tblAdd(id){const o=S.orders.find(x=>x.id===id);if(!o)return;cart.addTo=id;cart.tableOk='';render();toast(t('Les plats seront ajoutés à la')+' n°'+o.n)}
+function tblNew(){cart.tableOk=tblKey(cart.table);tblUpd()}
+function tblAsk(x,payer){const P=payer===true?'true':payer?`'${payer}'`:'false';
+  modal(`<h2>⚠️ ${t('Table')} ${esc(x.t)} ${t('occupée')}</h2><div class="muted">${t('Cette table a déjà une commande pas encore payée : les clients ne sont pas encore partis.')}</div>
+   <div class="card">${x.L.map(o=>`<div><b>n°${o.n}</b> · ${F(tot(o))}<div class="muted" style="font-size:14px">${o.items.map(i=>i.q+' × '+esc(i.nom)).join(', ')}</div></div>`).join('<hr style="border:0;border-top:1px solid var(--line);width:100%">')}</div>
+   ${x.L.map(o=>`<button class="btn ok full" style="min-height:56px" onclick="cart.addTo='${o.id}';cart.tableOk='';closeM();valider(${P})">➕ ${t('Ajouter à la')} n°${o.n} → ${t('Cuisine')}</button>`).join('')}
+   <button class="btn alt full" onclick="cart.tableOk=tblKey(cart.table);closeM();valider(${P})">${t('Nouvelle commande quand même')}</button>
+   <button class="btn ghost full" onclick="closeM();render()">${t('Changer de table')}</button>`)}
+function tbCard(){const s=S.set;
+  return `<section class="card"><div class="lbl">🍽️ ${t('Les tables du restaurant')}</div>
+   <div class="row"><label class="f">${t('Nombre de tables')}<input id="g_tb" inputmode="numeric" value="${esc(s.tables||'')}" placeholder="Ex : 10"></label>
+    <label class="f">${t('Autres tables')} (${t('facultatif')})<input id="g_tx" value="${esc(s.tablesX||'')}" placeholder="Ex : Terrasse 1, VIP"></label></div>
+   <div class="muted" style="font-size:13px">${t('Avec vos tables, la caisse montre des boutons : libres, ou occupées en orange tant que la commande n’est pas payée. Laissez vide pour écrire le numéro comme avant.')}</div>
+   <button class="btn" onclick="S.set.tables=Math.max(0,Math.min(99,Math.round(+val('g_tb')||0)));S.set.tablesX=val('g_tx').split(',').map(x=>x.trim().slice(0,20)).filter(Boolean).slice(0,30).join(', ');save();render();toast(t('Enregistré'))">${t('Enregistrer')}</button></section>`}
 function vitPage(){const P=pageCollect();S.page=P;P.photos=Array.isArray(P.photos)?P.photos:[];return P}
 async function vitPick(inp,kind){const f=inp.files&&inp.files[0];inp.value='';if(!f||vitBusy)return;const P=vitPage();
   if(kind==='photo'&&P.photos.length>=3)return toast('3 photos maximum');
