@@ -131,6 +131,13 @@ main{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;flex-directio
 .tchip.on{background:var(--warn);color:#fff}
 .twarn{background:var(--warn-soft);border:1.5px solid var(--warn);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:14px}
 .twarn b{color:var(--warn);font-size:16px}
+/* Suggestions : choisies par le patron dans le plat ; « À proposer » en caisse */
+.sugg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--ochre-soft);border:1.5px dashed var(--ochre);border-radius:12px;padding:8px 10px;font-size:14px}
+.sgb{border:1.5px solid var(--ochre);background:var(--surface);color:var(--ink);border-radius:99px;padding:6px 12px;font:700 14px var(--f-body);cursor:pointer;min-height:38px;display:inline-flex;align-items:center;gap:6px}
+.sgb small{color:var(--muted);font-weight:600;font-size:12px}.sgb b{color:var(--ochre);font-size:18px;line-height:1}
+.sgx{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.sgx summary{font-weight:700;cursor:pointer;min-height:32px}
+.sgx label.chip:has(input:checked){border-color:var(--ok);background:var(--ok-soft)}
 .btn{border:0;border-radius:12px;padding:13px 16px;font-weight:700;font-size:16px;cursor:pointer;background:var(--bissap);color:var(--on-accent);min-height:48px}
 .btn.alt{background:var(--bissap-soft);color:var(--bissap)}
 .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
@@ -446,6 +453,8 @@ function seed(){
     PT('Tacos',[['Moyen',2500],['Grand',3500]],'Fast-food'),
     PT('Pizza',[['Moyenne',4000],['Grande',6000]],'Fast-food'),
     P('Frites',1000,'Fast-food')];
+  const SG=(i,L)=>{plats[i].sugg=L.map(j=>plats[j].id)};
+  SG(20,[24,14,17]);SG(21,[24,15]);SG(22,[24,16]);SG(23,[14,19]);SG(12,[24,17]);SG(13,[24,14]);SG(0,[14,18]);
   const it=(i,q)=>({pid:plats[i].id,nom:plats[i].nom,prix:plats[i].prix,q});
   const at=h=>{const d=new Date(now);d.setHours(h,Math.floor(Math.random()*50),0,0);return d.toISOString()};
   const c1={id:uid(),nom:'Moussa Diop (exemple)',tel:'770000001',quartier:'Parcelles U17',paiements:[]};
@@ -499,7 +508,7 @@ function phoneDigits(p){let d=String(p||'').replace(/\D/g,'');if(d.startsWith('0
 function freshStart(){S=emptyS();snap={'set|main':JSON.stringify(rowsOf()['set|main'])};lastPull=EPOCH;AB=null;return snap['set|main']}
 function emptyS(){return{exemple:false,set:{nom:'',tel:'',adresse:'',wave:'',om:'',fraisLiv:500,lang:'fr',formule:'premium',pinPatron:'0000'},plats:[],orders:[],depenses:[],clients:[],abonnes:[],events:[],staff:[],stock:[],livExt:[]}}
 function freshResto(nom,tel){const d=seed();const t=tel.replace(/^221/,'').replace(/(\d\d)(\d{3})(\d\d)(\d\d)/,'$1 $2 $3 $4');
-  return{...emptyS(),plats:d.plats,stock:d.stock,set:{...d.set,nom:nom||'Mon restaurant',tel:t,wave:t,om:t,adresse:'',lang:(S&&S.set&&S.set.lang)||'fr'}}}
+  return{...emptyS(),plats:d.plats.map(({sugg,...p})=>p),stock:d.stock,set:{...d.set,nom:nom||'Mon restaurant',tel:t,wave:t,om:t,adresse:'',lang:(S&&S.set&&S.set.lang)||'fr'}}}
 function migrate(){if(!S.set)S.set=emptyS().set;S.set.formule=S.set.formule||'premium';S.set.pinPatron=S.set.pinPatron||'0000';
   COLS.forEach(c=>{if(!Array.isArray(S[c]))S[c]=[]});S.livExt.forEach(l=>{if(!l.id)l.id=uid()});
   const map={'Cuisinière':'cuisine','Aide cuisine':'cuisine','Serveur / Serveuse':'serveur','Livreur moto':'livreur','Caissier':'caissier'};
@@ -794,6 +803,21 @@ function platImg(p){return (Array.isArray(p.photos)&&p.photos[0])||p.photo||''}
 /* Tailles : un plat peut avoir un seul prix, ou plusieurs tailles (Petit, Moyen, Grand…) avec leur prix */
 const encK=x=>encodeURIComponent(x).replace(/'/g,'%27');
 const hasT=p=>Array.isArray(p.tailles)&&p.tailles.length>0;
+/* Suggestions : dans chaque plat, le patron choisit ce qu'on propose avec (frites, boisson…).
+   Rien de choisi = rien ne s'affiche, ni en caisse ni sur la page client. */
+const SG_MAX=4;let sgSel=[];
+function suggFor(ids){const out=[];
+  ids.forEach(id=>{const p=S.plats.find(x=>x.id===id);(p&&Array.isArray(p.sugg)?p.sugg:[]).forEach(sid=>{
+    const q=S.plats.find(x=>x.id===sid);if(out.length<SG_MAX&&q&&q.dispo&&!ids.includes(sid)&&!out.includes(q))out.push(q)})});
+  return out}
+function suggCaisse(lines){if(!lines.length)return '';const L=suggFor([...new Set(lines.map(l=>l.p.id))]);if(!L.length)return '';
+  return `<div class="sugg" role="note"><span class="muted">💡 ${t('À proposer au client')} :</span>${L.map(p=>`<button class="sgb" onclick="addP('${p.id}')">${esc(p.nom)} <small>${prixTxt(p)}</small><b aria-hidden="true">+</b></button>`).join('')}</div>`}
+function sgPickHTML(p,id){const sel=Array.isArray(p.sugg)?p.sugg.filter(x=>S.plats.some(y=>y.id===x)):[];sgSel=sel.slice();
+  const G=['Boissons','Desserts',...CATS.filter(c=>c!=='Boissons'&&c!=='Desserts')].map(c=>[c,S.plats.filter(x=>x.cat===c&&x.id!==id)]).filter(([,L])=>L.length);if(!G.length)return '';
+  return `<details class="sgx" ${sel.length?'open':''}><summary>💡 ${t('Proposer avec ce plat')} <span class="muted">(${t('facultatif')}) · <span id="sgN">${sel.length}</span>/${SG_MAX}</span></summary>
+   <div class="muted" style="font-size:13px">${t('Quand un client prend ce plat, la caisse et votre page client proposent ces choses en plus (ex : frites, boisson). Rien de coché = rien ne s’affiche.')}</div>
+   ${G.map(([c,L])=>`<div class="lbl" style="margin-top:4px">${t(c)}</div><div class="chips" style="flex-wrap:wrap;overflow:visible">${L.map(x=>`<label class="chip"><input type="checkbox" class="m_sg" value="${esc(x.id)}" ${sel.includes(x.id)?'checked':''} onchange="sgChk(this)" style="width:auto;margin-right:6px">${esc(x.nom)}</label>`).join('')}</div>`).join('')}</details>`}
+function sgChk(cb){const n=document.querySelectorAll('.m_sg:checked').length;if(n>SG_MAX){cb.checked=false;toast(t('4 au maximum'));return}sgSel=sgSel.filter(x=>x!==cb.value);if(cb.checked)sgSel.push(cb.value);const e=document.getElementById('sgN');if(e)e.textContent=n}
 function prixTxt(p){if(!hasT(p))return F(p.prix);const v=p.tailles.map(x=>+x.p||0),a=Math.min(...v),b=Math.max(...v);return a===b?F(a):F(a).replace(/\s*F$/,'')+' – '+F(b)}
 function cItem(key){const i=key.indexOf('~'),id=i<0?key:key.slice(0,i);const p=S.plats.find(x=>x.id===id);if(!p)return null;
   if(i<0)return{key,p,nom:p.nom,prix:p.prix,tl:''};const tl=(p.tailles||[]).find(x=>x.n===key.slice(i+1));if(!tl)return null;return{key,p,nom:p.nom+' ('+tl.n+')',prix:+tl.p||0,tl:tl.n}}
@@ -874,6 +898,7 @@ function vCaisse(){
        ${cart.livSel==='new'?`<div class="row"><label class="f">Nom du livreur<input id="c_ln" value="${esc(cart.livreur)}" oninput="cart.livreur=this.value"></label><label class="f">Son téléphone<input id="c_lt" inputmode="tel" value="${esc(cart.livTel)}" oninput="cart.livTel=this.value"></label></div>`:''}`:''}`}
     <div>${lines.map(l=>`<div class="line"><div class="g"><b>${esc(l.nom)}</b><div class="muted">${F(l.prix)}</div></div>
        <div class="qty"><button onclick="decP(decodeURIComponent('${encK(l.key)}'))" aria-label="Moins">−</button><b style="min-width:22px;text-align:center">${l.q}</b><button onclick="addK(decodeURIComponent('${encK(l.key)}'))" aria-label="Plus">+</button></div></div>`).join('')||`<div class="empty">${t('Touchez un plat pour l\'ajouter.')}</div>`}</div>
+    ${suggCaisse(lines)}
     <label class="f">${t('Note')}<input id="c_note" placeholder="Ex : sans piment, bien cuit…" value="${esc(cart.note)}" oninput="cart.note=this.value"></label>
     <div class="total"><span>${addO?t('Ajout'):t('Total')}</span><span id="cartTot">${F(total)}</span></div>
     ${addO?`<button class="btn full" style="min-height:58px" onclick="valider(false)">${t('Ajouter et envoyer en cuisine')}</button>`:me.role==='serveur'?`<button class="btn full" onclick="valider(false)">${t('Envoyer en cuisine')}</button>`:`<div class="paybar">
@@ -1301,7 +1326,7 @@ function vMenu(){
   return `<div class="row">${isP()?`<button class="btn" onclick="platModal()">+ ${t('Ajouter')} un plat</button>`:''}<button class="btn alt" onclick="shareMenu()">${t('Partager le menu (WhatsApp)')}</button></div>
   ${CATS.map(c=>{const L=S.plats.filter(p=>p.cat===c);if(!L.length)return'';return `<section class="card"><div class="lbl">${t(c)}</div>
    ${L.map(p=>`<div class="line">${platImg(p)?`<img class="thumb" src="${esc(platImg(p))}" alt="" loading="lazy">`:`<span class="thumb"></span>`}<div class="g" onclick="platModal('${p.id}')" style="cursor:pointer"><b>${esc(p.nom)}</b> ${p.jours&&p.jours.includes(wd)?`<span class="tag t-jour">${t('Plat du jour')}</span>`:''}${p.enLigne===false?` <span class="tag t-neutre">Pas sur la page</span>`:''}
-     <div class="muted">${prixTxt(p)}${hasT(p)?' · '+p.tailles.length+' '+t('tailles'):''}${p.jours&&p.jours.length?' · '+p.jours.map(j=>JOURS[j].slice(0,3)).join(', '):''}</div></div>
+     <div class="muted">${prixTxt(p)}${hasT(p)?' · '+p.tailles.length+' '+t('tailles'):''}${p.jours&&p.jours.length?' · '+p.jours.map(j=>JOURS[j].slice(0,3)).join(', '):''}${Array.isArray(p.sugg)&&p.sugg.length?' · 💡 '+p.sugg.length:''}</div></div>
      <button class="btn sm ${p.dispo?'alt':'ghost'}" onclick="toggleDispo('${p.id}')">${p.dispo?t('Disponible'):t('Fini')}</button></div>`).join('')}</section>`}).join('')}
   <div class="muted" style="font-size:14px">Touchez un plat pour changer son prix, ses jours, ses photos ou sa description. « Fini » le cache de la caisse quand la marmite est vide.</div>
   ${isP()?`<section class="card"><div class="lbl">${t('Ce qui va en cuisine')}</div>
@@ -1324,6 +1349,7 @@ function platModal(id){if(!isP()){toast('Seul le patron peut changer les plats e
    <label class="chk"><input type="checkbox" id="m_web" ${p.enLigne!==false?'checked':''}> Afficher sur ma page client</label>
    <div class="lbl">${t('Plat du jour')} le…</div>
    <div class="chips" style="flex-wrap:wrap;overflow:visible">${[1,2,3,4,5,6,0].map(j=>`<label class="chip"><input type="checkbox" class="m_j" value="${j}" ${p.jours&&p.jours.includes(j)?'checked':''} style="width:auto;margin-right:6px">${JOURS[j]}</label>`).join('')}</div>
+   ${sgPickHTML(p,id)}
    <button class="btn full" onclick="savePlat('${id||''}')">${t('Enregistrer')}</button>
    ${id?`<button class="btn ghost full" style="color:var(--bad)" onclick="delPlat('${id}')">${t('Supprimer')} ce plat</button>`:''}
    <button class="btn ghost full" onclick="cancelPlat()">${t('Annuler')}</button>`)}
@@ -1371,7 +1397,8 @@ function savePlat(id){if(phBusy)return toast('Attendez la fin de l\'envoi de la 
   const jours=[...document.querySelectorAll('.m_j:checked')].map(x=>+x.value);
   const w=document.getElementById('m_web');const d={nom,prix,cat:val('m_cat'),jours,photos:tmpPhotos.slice(0,4),photo:'',desc:val('m_desc').trim().slice(0,300),enLigne:w?w.checked:true};
   if(tailles)d.tailles=tailles;
-  if(id){const P=S.plats.find(x=>x.id===id);Object.assign(P,d);if(!tailles)delete P.tailles}else S.plats.push({id:uid(),dispo:true,...d});
+  const ck=[...document.querySelectorAll('.m_sg:checked')].map(x=>x.value),sg=[...sgSel.filter(x=>ck.includes(x)),...ck.filter(x=>!sgSel.includes(x))].slice(0,SG_MAX);if(sg.length)d.sugg=sg;
+  if(id){const P=S.plats.find(x=>x.id===id);Object.assign(P,d);if(!tailles)delete P.tailles;if(!sg.length)delete P.sugg}else S.plats.push({id:uid(),dispo:true,...d});
   storageRemove(tmpGone);tmpNew=[];tmpGone=[];save();closeM();render();toast('Enregistré')}
 let delConf=null;
 function delPlat(id){if(delConf!==id){delConf=id;toast('Touchez encore pour supprimer');return}const dp=S.plats.find(x=>x.id===id);if(dp&&Array.isArray(dp.photos))storageRemove(dp.photos);storageRemove(tmpNew);tmpNew=[];S.plats=S.plats.filter(x=>x.id!==id);delConf=null;save();closeM();render()}
