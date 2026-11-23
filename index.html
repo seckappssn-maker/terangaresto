@@ -138,6 +138,8 @@ main{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;flex-directio
 .sgx{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .sgx summary{font-weight:700;cursor:pointer;min-height:32px}
 .sgx label.chip:has(input:checked){border-color:var(--ok);background:var(--ok-soft)}
+/* Table oubliée : bouton sur la commande */
+.tblmiss{border:1.5px dashed var(--warn);background:var(--warn-soft);color:var(--warn);border-radius:99px;padding:4px 12px;font:800 14px var(--f-body);cursor:pointer;min-height:34px}
 .btn{border:0;border-radius:12px;padding:13px 16px;font-weight:700;font-size:16px;cursor:pointer;background:var(--bissap);color:var(--on-accent);min-height:48px}
 .btn.alt{background:var(--bissap-soft);color:var(--bissap)}
 .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
@@ -913,6 +915,7 @@ function decP(id){cart.items[id]=Math.max(0,(cart.items[id]||0)-1);if(!cart.item
 function valider(payer){
   const items=Object.entries(cart.items).filter(([,q])=>q>0).map(([k,q])=>{const c=cItem(k);return c?{pid:c.p.id,nom:c.nom,prix:c.prix,q,...(c.tl?{t:c.tl}:{})}:null}).filter(Boolean);
   if(!items.length){toast('Ajoutez au moins un plat');return}
+  if(!cart.addTo&&cart.type==='place'&&!tblKey(cart.table)&&!cart.sansTable&&tablesList().length){tblForget(payer);return}
   if(!cart.addTo&&cart.type==='place'){const x=tblOccOf(cart.table);if(x&&cart.tableOk!==tblKey(cart.table)){tblAsk(x,payer);return}}
   if(cart.addTo){const o=S.orders.find(x=>x.id===cart.addTo);
     if(!o||o.paye||o.annule){toast('Cette commande est déjà payée');cart=newCart();render();return}
@@ -1251,7 +1254,7 @@ function vCommandes(){
   <div class="olist">${L.map(o=>{const s=ST[o.statut];const e=etat(o);const isNew=Date.now()-new Date(o.date).getTime()<120000&&e==='cuisine';const nx=o.statut==='cuisine'?['prete','Prête']:o.statut==='prete'?['servie',o.type==='livraison'?'Livrée':'Servie']:null;
    return `<article class="order s-${e} ${isNew?'new':''}">
     <div class="row between"><span class="row" style="gap:10px"><span class="num">n°${o.n}</span><span class="ostat">${EC[e][1]}</span>${isNew?'<span class="tag t-du">NOUVEAU</span>':''}${o.web?'<span class="tag" style="background:#7B3FA0;color:#fff">🌐 En ligne</span>':''}${o.live?`<span class="tag t-live">🔴 Live${o.tiktok?' · '+esc(o.tiktok):''}</span>`:''}</span><span class="muted">${new Date(o.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div>
-    <div class="row"><span class="tag t-neutre">${t(TY[o.type])}${o.table?' · '+t('Table')+' '+esc(o.table):''}</span>${o.statut==='servie'?`<span class="tag t-servie">${t(o.type==='livraison'?'Livrée':'Servie')}</span>`:''}${o.paye?`<span class="tag t-paye">${o.mode==='credit'?t('Dette'):o.mode==='abonne'?t('Abonnement'):t('Payée')+' · '+mName(o.mode)}</span>`:`<span class="tag t-du">${o.paiements&&o.paiements.length?t('Déjà payé')+' '+F(sum(o.paiements))+' · '+t('Reste')+' '+F(tot(o)-sum(o.paiements)):t('À payer')}</span>`}</div>
+    <div class="row"><span class="tag t-neutre">${t(TY[o.type])}${o.table?' · '+t('Table')+' '+esc(o.table):''}</span>${o.type==='place'&&!o.table&&!o.annule&&o.statut!=='servie'&&tablesList().length?`<button class="tblmiss" onclick="tableModal('${o.id}')">🍽️ ${t('Table ?')}</button>`:''}${o.statut==='servie'?`<span class="tag t-servie">${t(o.type==='livraison'?'Livrée':'Servie')}</span>`:''}${o.paye?`<span class="tag t-paye">${o.mode==='credit'?t('Dette'):o.mode==='abonne'?t('Abonnement'):t('Payée')+' · '+mName(o.mode)}</span>`:`<span class="tag t-du">${o.paiements&&o.paiements.length?t('Déjà payé')+' '+F(sum(o.paiements))+' · '+t('Reste')+' '+F(tot(o)-sum(o.paiements)):t('À payer')}</span>`}</div>
     ${o.client&&o.client.nom?`<div><b>${esc(o.client.nom)}</b> ${esc(o.client.tel||'')} ${o.client.quartier?'· '+esc(o.client.quartier):''}</div>`:''}
     ${o.type==='livraison'?livRow(o):''}
     ${o.par&&isP()?`<div class="muted" style="font-size:13px">Prise par ${esc(o.par)}${o.encPar?' · encaissée par '+esc(o.encPar):''}</div>`:''}
@@ -1273,6 +1276,7 @@ function remiseModal(id){const o=S.orders.find(x=>x.id===id),ST=sousTot(o);
 function setSt(id,s){const o=S.orders.find(x=>x.id===id);o.statut=s;const nw=new Date().toISOString();if(s==='prete'&&!o.preteLe)o.preteLe=nw;if(s==='servie'&&!o.servieLe)o.servieLe=nw;save();render()}
 function orderMenu(id){const o=S.orders.find(x=>x.id===id);
   modal(`<h2>Commande n°${o.n}</h2>
+   ${o.type==='place'&&!o.annule?`<button class="btn alt full" onclick="tableModal('${id}')">🍽️ ${o.table?t('Changer la table')+' ('+esc(o.table)+')':t('Choisir la table')}</button>`:''}
    <button class="btn alt full" onclick="ticketOrder('${id}')">${t('Ticket')} client</button>
    <button class="btn alt full" onclick="ticketCuisine('${id}')">${t('Bon cuisine')}</button>
    ${o.client&&o.client.tel?`<button class="btn alt full" onclick="waOrder('${id}')">${t('Envoyer sur WhatsApp')}</button>`:''}
@@ -2032,6 +2036,37 @@ function tbCard(){const s=S.set;
    <label class="f">${t('Si le client paie avant de manger, la table reste occupée (en bleu) pendant')}<span style="display:flex;align-items:center;gap:8px"><input id="g_tm" inputmode="numeric" value="${esc(s.tableMin||30)}" style="max-width:110px"> ${t('minutes après le plat prêt')}</span></label>
    <div class="muted" style="font-size:13px">${t('Ou touchez la table puis « Table libre » quand ils partent.')}</div>
    <button class="btn" onclick="S.set.tables=Math.max(0,Math.min(99,Math.round(+val('g_tb')||0)));S.set.tablesX=val('g_tx').split(',').map(x=>x.trim().slice(0,20)).filter(Boolean).slice(0,30).join(', ');S.set.tableMin=Math.max(5,Math.min(240,Math.round(+val('g_tm')||30)));save();render();toast(t('Enregistré'))">${t('Enregistrer')}</button></section>`}
+/* ---------- Table oubliée ----------
+   1) avant d'envoyer une commande « Sur place » sans table, on demande « Quelle table ? » (bouton « Sans table ») ;
+   2) après, on peut choisir / changer la table depuis la commande (bouton « Table ? » ou « … »). */
+function tblGridHTML(cur,skipId,fn){const occ=new Map();
+  tablesOcc().forEach(x=>{const L=x.L.filter(o=>o.id!==skipId);if(L.length)occ.set(tblKey(x.t),{L,du:L.some(o=>!o.paye)})});
+  return `<div class="tblgrid">${tablesList().map((n,i)=>{const x=occ.get(tblKey(n)),on=!!cur&&tblKey(cur)===tblKey(n);
+    const sub=on?t('actuelle'):!x?t('libre'):'n°'+x.L[0].n+(x.L.length>1?'+':'')+' · '+(x.du?t('occupée'):t('payée'));
+    return `<button class="tblbtn ${x&&!on?(x.du?'occ':'paid'):''} ${on?'on':''}" onclick="${fn}(${i})"><b>${esc(n)}</b><small>${sub}</small></button>`}).join('')}</div>`}
+let tblPayer=false;
+function tblForget(payer){tblPayer=payer;
+  modal(`<h2>🍽️ ${t('Quelle table ?')}</h2><div class="muted">${t('Commande sur place sans table : touchez la table du client.')}</div>
+   ${tblGridHTML('','','tblForgetPick')}
+   <button class="btn alt full" onclick="tblSans()">${t('Sans table')}</button>
+   <button class="btn ghost full" onclick="closeM();render()">${t('Retour')}</button>`)}
+function tblForgetPick(i){const v=tablesList()[i];if(v==null)return;cart.table=v;cart.tableOk='';closeM();valider(tblPayer)}
+function tblSans(){cart.sansTable=true;closeM();valider(tblPayer)}
+let tblOrd='',tblConf='';
+function tableModal(id){const o=S.orders.find(x=>x.id===id);if(!o)return;tblOrd=id;tblConf='';const L=tablesList();closeM();
+  modal(`<h2>🍽️ ${t('Table')} · n°${o.n}</h2>
+   <div class="muted">${o.table?t('Table actuelle')+' : <b>'+esc(o.table)+'</b>. '+t('Touchez la nouvelle table.'):t('Touchez la table du client.')}</div>
+   ${L.length?tblGridHTML(o.table,id,'tblOrdPick'):`<label class="f">${t('Table')} n°<input id="m_tb" inputmode="numeric" value="${esc(o.table||'')}"></label>
+     <button class="btn full" onclick="tblOrdSet(val('m_tb'))">${t('Enregistrer')}</button>`}
+   ${o.table?`<button class="btn alt full" onclick="tblOrdSet('')">${t('Sans table')}</button>`:''}
+   <button class="btn ghost full" onclick="closeM()">${t('Fermer')}</button>`)}
+function tblOrdPick(i){const v=tablesList()[i];if(v==null)return;const o=S.orders.find(x=>x.id===tblOrd);if(!o)return;
+  if(tblKey(o.table)===tblKey(v)){closeM();return}
+  const x=tblOccOf(v),autres=x?x.L.filter(y=>y.id!==o.id):[];
+  if(autres.length&&tblConf!==tblKey(v)){tblConf=tblKey(v);toast(t('Table')+' '+v+' '+t('occupée')+' (n°'+autres.map(y=>y.n).join(', n°')+') : '+t('touchez encore pour confirmer'));return}
+  tblOrdSet(v)}
+function tblOrdSet(v){const o=S.orders.find(x=>x.id===tblOrd);if(!o)return;v=String(v||'').trim().slice(0,20);
+  o.table=v;delete o.tableLibre;save();closeM();render();toast(v?t('Table')+' '+v+' ✓':t('Sans table')+' ✓')}
 function vitPage(){const P=pageCollect();S.page=P;P.photos=Array.isArray(P.photos)?P.photos:[];return P}
 async function vitPick(inp,kind){const f=inp.files&&inp.files[0];inp.value='';if(!f||vitBusy)return;const P=vitPage();
   if(kind==='photo'&&P.photos.length>=3)return toast('3 photos maximum');
